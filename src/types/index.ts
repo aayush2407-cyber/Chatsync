@@ -18,6 +18,22 @@ export interface Message {
   hash: string;
 }
 
+export type ReminderStatus = 'pending' | 'triggered' | 'done';
+
+export interface MessageReminder {
+  id: string;
+  messageId: string;
+  chatId: string;
+  remindAt: string; // ISO string
+  note: string;
+  status: ReminderStatus;
+  createdAt: string;
+  title?: string;
+  deadline?: string | null;
+  sourceText?: string;
+  sender?: string;
+}
+
 export type ExtractedItemType = 'date' | 'assignment' | 'notice' | 'meeting';
 export type ItemPriority = 'low' | 'medium' | 'high';
 export type ReminderOffset = '1d' | '3h' | '1h' | 'none';
@@ -75,6 +91,9 @@ export interface StudentProfile {
 export interface StudentSettings {
   morningDigest: boolean;
   digestTime: string;
+  eveningDigest: boolean;
+  eveningDigestTime: string;
+  smartNudgesEnabled: boolean;
   urgentAlerts: boolean;
   quietHoursEnabled: boolean;
   quietHoursStart: string;
@@ -89,6 +108,7 @@ export interface StudentSettings {
 
 export type NavTab = 
   | 'dashboard'
+  | 'agenda'
   | 'connect'
   | 'chats'
   | 'dates'

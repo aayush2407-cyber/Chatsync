@@ -58,13 +58,13 @@ export const ReminderSelector: React.FC<ReminderSelectorProps> = ({
         onClick={() => setIsOpen(!isOpen)}
         className={`px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer min-h-[32px] ${
           hasReminder
-            ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800'
-            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+            ? 'bg-[#FEF08A] dark:bg-[#713F12] text-[#854D0E] dark:text-[#FEF08A] border border-[#CA8A04]'
+            : 'bg-[#EEF1DC] dark:bg-[#283017] text-[#3F4A16] dark:text-[#EEF1DC] hover:bg-[#DDE3BE] dark:hover:bg-[#343C1F] border border-[#E3E6D3] dark:border-[#2B321A]'
         }`}
         title={hasReminder ? `Reminder set: ${currentOffset}` : 'Set a reminder'}
       >
         {hasReminder ? (
-          <BellRing className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 animate-bounce" />
+          <BellRing className="w-3.5 h-3.5 text-[#854D0E] dark:text-[#FEF08A] animate-bounce" />
         ) : (
           <Bell className="w-3.5 h-3.5" />
         )}
@@ -80,12 +80,12 @@ export const ReminderSelector: React.FC<ReminderSelectorProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 bottom-full sm:bottom-auto sm:top-full mb-1.5 sm:mb-0 sm:mt-1.5 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 z-40 animate-in fade-in zoom-in-95">
-          <div className="px-2.5 py-1.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+        <div className="absolute right-0 bottom-full sm:bottom-auto sm:top-full mb-1.5 sm:mb-0 sm:mt-1.5 w-56 bg-white dark:bg-[#1D2112] rounded-2xl shadow-xl border border-[#E3E6D3] dark:border-[#2B321A] p-1.5 z-40 animate-in fade-in zoom-in-95">
+          <div className="px-2.5 py-1.5 border-b border-[#E3E6D3] dark:border-[#2B321A] flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#6B7059] dark:text-[#A4AA8E]">
               Set Reminder
             </span>
-            <Sparkles className="w-3 h-3 text-amber-500" />
+            <Sparkles className="w-3 h-3 text-[#D98324]" />
           </div>
 
           <div className="py-1 space-y-0.5">
@@ -98,18 +98,18 @@ export const ReminderSelector: React.FC<ReminderSelectorProps> = ({
                   onClick={() => handleSelect(opt.offset)}
                   className={`w-full text-left px-2.5 py-2 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer ${
                     isSelected
-                      ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 font-semibold'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                      ? 'bg-[#EEF1DC] dark:bg-[#283017] text-[#3F4A16] dark:text-[#EEF1DC] font-semibold'
+                      : 'hover:bg-[#EEF1DC]/60 dark:hover:bg-[#283017]/60 text-[#2B2F1E] dark:text-[#EEF1DC]'
                   }`}
                 >
                   <div>
                     <div className="font-medium">{opt.label}</div>
-                    <div className="text-[10px] text-slate-400">{opt.desc}</div>
+                    <div className="text-[10px] text-[#6B7059] dark:text-[#A4AA8E]">{opt.desc}</div>
                   </div>
                   {isSelected ? (
-                    <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <Check className="w-3.5 h-3.5 text-[#6B7A2A] dark:text-[#9AAE3C] shrink-0" />
                   ) : opt.offset === 'none' ? (
-                    <BellOff className="w-3 h-3 text-slate-400 shrink-0" />
+                    <BellOff className="w-3 h-3 text-[#6B7059] shrink-0" />
                   ) : null}
                 </button>
               );

@@ -9,6 +9,7 @@ import {
   StudentSettings,
   NavTab,
   ReminderOffset,
+  MessageReminder,
 } from '../types';
 import {
   initialChats,
@@ -17,6 +18,7 @@ import {
   initialSummaries,
   initialStudent,
   initialSettings,
+  initialReminders,
 } from '../data/sampleData';
 import { generateDemoData } from '../data/demoDataGenerator';
 import { ParsedChatResult } from '../utils/chatParsers';
@@ -123,6 +125,27 @@ interface SyncPulseContextType {
   setIsNotificationModalOpen: (val: boolean) => void;
   requestNotificationPermission: () => Promise<boolean>;
   checkDueReminders: () => void;
+
+  // In-Chat Message Reminders
+  messageReminders: MessageReminder[];
+  addMessageReminder: (reminder: Omit<MessageReminder, 'id' | 'createdAt' | 'status'> & { id?: string; createdAt?: string; status?: 'pending' | 'triggered' | 'done' }) => void;
+  updateMessageReminder: (reminder: MessageReminder) => void;
+  deleteMessageReminder: (reminderId: string) => void;
+  snoozeMessageReminder: (reminderId: string, durationMinutes: number) => void;
+  toggleMessageReminderDone: (reminderId: string) => void;
+  activeTriggeredReminder: MessageReminder | null;
+  dismissTriggeredReminder: () => void;
+  highlightedMessageId: string | null;
+  setHighlightedMessageId: (id: string | null) => void;
+  isRemindersDrawerOpen: boolean;
+  setIsRemindersDrawerOpen: (open: boolean) => void;
+  openChatForReminder: (reminder: MessageReminder) => void;
+  openChatForMessage: (chatId: string, messageId?: string) => void;
+  triggerMorningDigest: () => void;
+  triggerEveningDigest: () => void;
+  activeReminderModalState: { isOpen: boolean; message: Message | null; item: ExtractedItem | null };
+  openReminderModalForMessage: (msg: Message, item?: ExtractedItem | null) => void;
+  closeReminderModal: () => void;
 
   // Calendar Integration
   toggleItemAlarm: (itemId: string) => void;
@@ -236,6 +259,45 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   });
 
+  // In-Chat Message Reminders state
+  const [messageReminders, setMessageReminders] = useState<MessageReminder[]>(() => {
+    try {
+      const data = localStorage.getItem(`${STORAGE_KEY}_message_reminders`);
+      return data ? JSON.parse(data) : initialReminders;
+    } catch {
+      return initialReminders;
+    }
+  });
+
+  const [activeTriggeredReminder, setActiveTriggeredReminder] = useState<MessageReminder | null>(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [isRemindersDrawerOpen, setIsRemindersDrawerOpen] = useState(false);
+  const [activeReminderModalState, setActiveReminderModalState] = useState<{
+    isOpen: boolean;
+    message: Message | null;
+    item: ExtractedItem | null;
+  }>({
+    isOpen: false,
+    message: null,
+    item: null,
+  });
+
+  const openReminderModalForMessage = (msg: Message, item?: ExtractedItem | null) => {
+    setActiveReminderModalState({
+      isOpen: true,
+      message: msg,
+      item: item || null,
+    });
+  };
+
+  const closeReminderModal = () => {
+    setActiveReminderModalState({
+      isOpen: false,
+      message: null,
+      item: null,
+    });
+  };
+
   const [isScanning, setIsScanning] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -304,6 +366,10 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     localStorage.setItem(`${STORAGE_KEY}_summaries`, JSON.stringify(summaries));
   }, [summaries]);
+
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY}_message_reminders`, JSON.stringify(messageReminders));
+  }, [messageReminders]);
 
   const showToast = (message: string) => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -1150,6 +1216,7 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setMessages(initialMessages);
     setItems(initialItems);
     setSummaries(initialSummaries);
+    setMessageReminders(initialReminders);
     setStudent(initialStudent);
     setSettings(initialSettings);
     showToast('Freshman demo data loaded');
@@ -1160,6 +1227,7 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setMessages([]);
     setItems([]);
     setSummaries([]);
+    setMessageReminders([]);
     showToast('All data cleared. Showing fresh empty states.');
   };
 
@@ -1168,12 +1236,14 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setMessages([]);
     setItems([]);
     setSummaries([]);
+    setMessageReminders([]);
     if (typeof window !== 'undefined') {
       try {
         localStorage.removeItem(`${STORAGE_KEY}_chats`);
         localStorage.removeItem(`${STORAGE_KEY}_messages`);
         localStorage.removeItem(`${STORAGE_KEY}_items`);
         localStorage.removeItem(`${STORAGE_KEY}_summaries`);
+        localStorage.removeItem(`${STORAGE_KEY}_message_reminders`);
       } catch {
         // storage ignored
       }
@@ -1283,12 +1353,265 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
+  const addMessageReminder = (
+    reminder: Omit<MessageReminder, 'id' | 'createdAt' | 'status'> & {
+      id?: string;
+      createdAt?: string;
+      status?: 'pending' | 'triggered' | 'done';
+    }
+  ) => {
+    const newId = reminder.id || `rem-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const fullReminder: MessageReminder = {
+      id: newId,
+      messageId: reminder.messageId,
+      chatId: reminder.chatId,
+      remindAt: reminder.remindAt,
+      note: reminder.note || '',
+      status: reminder.status || 'pending',
+      createdAt: reminder.createdAt || new Date().toISOString(),
+      title: reminder.title,
+      deadline: reminder.deadline,
+      sourceText: reminder.sourceText,
+      sender: reminder.sender,
+    };
+
+    setMessageReminders((prev) => {
+      const filtered = prev.filter((r) => r.messageId !== reminder.messageId);
+      return [fullReminder, ...filtered];
+    });
+
+    if (
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      Notification.permission === 'default'
+    ) {
+      setIsNotificationModalOpen(true);
+    }
+  };
+
+  const updateMessageReminder = (updated: MessageReminder) => {
+    setMessageReminders((prev) =>
+      prev.map((r) => (r.id === updated.id ? updated : r))
+    );
+  };
+
+  const deleteMessageReminder = (reminderId: string) => {
+    setMessageReminders((prev) => prev.filter((r) => r.id !== reminderId));
+    if (activeTriggeredReminder?.id === reminderId) {
+      setActiveTriggeredReminder(null);
+    }
+    showToast('Reminder deleted');
+  };
+
+  const snoozeMessageReminder = (reminderId: string, durationMinutes: number) => {
+    const newRemindAt = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString();
+    setMessageReminders((prev) =>
+      prev.map((r) =>
+        r.id === reminderId
+          ? { ...r, remindAt: newRemindAt, status: 'pending' }
+          : r
+      )
+    );
+    if (activeTriggeredReminder?.id === reminderId) {
+      setActiveTriggeredReminder(null);
+    }
+    const label =
+      durationMinutes === 10
+        ? '10 minutes'
+        : durationMinutes === 60
+        ? '1 hour'
+        : 'tomorrow';
+    showToast(`Reminder snoozed for ${label}`);
+  };
+
+  const toggleMessageReminderDone = (reminderId: string) => {
+    setMessageReminders((prev) =>
+      prev.map((r) => {
+        if (r.id === reminderId) {
+          const nextStatus = r.status === 'done' ? 'pending' : 'done';
+          showToast(nextStatus === 'done' ? 'Reminder marked as done' : 'Reminder reopened');
+          return { ...r, status: nextStatus };
+        }
+        return r;
+      })
+    );
+    if (activeTriggeredReminder?.id === reminderId) {
+      setActiveTriggeredReminder(null);
+    }
+  };
+
+  const dismissTriggeredReminder = () => {
+    setActiveTriggeredReminder(null);
+  };
+
+  const openChatForReminder = (reminder: MessageReminder) => {
+    setActiveTab('chats');
+    setSelectedChatId(reminder.chatId);
+    setHighlightedMessageId(reminder.messageId);
+    setActiveTriggeredReminder(null);
+    setIsRemindersDrawerOpen(false);
+  };
+
+  const openChatForMessage = (chatId: string, messageId?: string) => {
+    setActiveTab('chats');
+    setSelectedChatId(chatId);
+    if (messageId) {
+      setHighlightedMessageId(messageId);
+    }
+    setActiveTriggeredReminder(null);
+    setIsRemindersDrawerOpen(false);
+  };
+
+  const sendBrowserOrSWNotification = (title: string, options?: NotificationOptions) => {
+    if (
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      Notification.permission === 'granted' &&
+      settings.browserNotificationsEnabled
+    ) {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready
+          .then((reg) => {
+            reg.showNotification(title, {
+              icon: '/pwa-192x192.png',
+              badge: '/pwa-192x192.png',
+              ...options,
+            });
+          })
+          .catch(() => {
+            try {
+              new Notification(title, { icon: '/pwa-192x192.png', ...options });
+            } catch {
+              // Suppress notification errors
+            }
+          });
+      } else {
+        try {
+          new Notification(title, { icon: '/pwa-192x192.png', ...options });
+        } catch {
+          // Suppress notification errors
+        }
+      }
+    }
+  };
+
+  const triggerMorningDigest = () => {
+    const todayStr = new Date().toDateString();
+    const todaysItems = items
+      .filter(
+        (i) =>
+          !i.done &&
+          (i.type === 'assignment' || i.type === 'meeting' || i.type === 'date') &&
+          (i.deadline || i.startTime) &&
+          new Date(i.deadline || i.startTime!).toDateString() === todayStr
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.deadline || a.startTime!).getTime() -
+          new Date(b.deadline || b.startTime!).getTime()
+      );
+
+    if (todaysItems.length > 0) {
+      const summary = todaysItems
+        .map(
+          (i) =>
+            `${i.title} (${new Date(i.deadline || i.startTime!).toLocaleTimeString([], {
+              hour: 'numeric',
+              minute: '2-digit',
+            })})`
+        )
+        .join(', ');
+
+      showToast(`☀️ Morning Digest (${todaysItems.length} items): ${summary}`);
+      sendBrowserOrSWNotification(`☀️ Morning Briefing: Today's Plan`, {
+        body: `${todaysItems.length} items scheduled today: ${summary}`,
+      });
+    } else {
+      showToast("☀️ Morning Digest: You're all caught up! No deadlines or meetings due today.");
+      sendBrowserOrSWNotification(`☀️ Morning Briefing`, {
+        body: 'No deadlines or meetings due today. Have a productive day!',
+      });
+    }
+  };
+
+  const triggerEveningDigest = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toDateString();
+
+    const tomorrowsItems = items
+      .filter(
+        (i) =>
+          !i.done &&
+          (i.type === 'assignment' || i.type === 'meeting' || i.type === 'date') &&
+          (i.deadline || i.startTime) &&
+          new Date(i.deadline || i.startTime!).toDateString() === tomorrowStr
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.deadline || a.startTime!).getTime() -
+          new Date(b.deadline || b.startTime!).getTime()
+      );
+
+    if (tomorrowsItems.length > 0) {
+      const summary = tomorrowsItems
+        .map(
+          (i) =>
+            `${i.title} (${new Date(i.deadline || i.startTime!).toLocaleTimeString([], {
+              hour: 'numeric',
+              minute: '2-digit',
+            })})`
+        )
+        .join(', ');
+
+      showToast(`🌙 Evening Digest (${tomorrowsItems.length} tomorrow): ${summary}`);
+      sendBrowserOrSWNotification(`🌙 Evening Digest: Tomorrow's Preview`, {
+        body: `${tomorrowsItems.length} items scheduled tomorrow: ${summary}`,
+      });
+    } else {
+      showToast("🌙 Evening Digest: Tomorrow has zero deadlines or meetings scheduled!");
+      sendBrowserOrSWNotification(`🌙 Evening Digest`, {
+        body: 'No deadlines scheduled tomorrow. Enjoy your evening!',
+      });
+    }
+  };
+
   const checkDueReminders = () => {
     if (typeof window === 'undefined') return;
     const now = Date.now();
     const currentTriggered = new Set(triggeredReminderKeys);
     const newTriggered: string[] = [];
 
+    // 1. Process Message Reminders in Chronological Queue Order (sorted by scheduled time)
+    // and never fire the same reminder twice.
+    const dueMessageReminders = messageReminders
+      .filter((r) => r.status === 'pending')
+      .filter((r) => {
+        const t = new Date(r.remindAt).getTime();
+        return !isNaN(t) && now >= t;
+      })
+      .sort((a, b) => new Date(a.remindAt).getTime() - new Date(b.remindAt).getTime());
+
+    for (const r of dueMessageReminders) {
+      const reminderKey = `msg_rem_${r.id}_${r.remindAt}`;
+      if (!currentTriggered.has(reminderKey)) {
+        newTriggered.push(reminderKey);
+
+        // Update status to triggered
+        setMessageReminders((prev) =>
+          prev.map((item) => (item.id === r.id ? { ...item, status: 'triggered' } : item))
+        );
+
+        setActiveTriggeredReminder(r);
+        showToast(`⏰ Reminder due: "${r.title || r.note || 'Class message'}"`);
+
+        sendBrowserOrSWNotification(`SyncPulse Reminder: ${r.title || 'Class Note'}`, {
+          body: r.note || r.sourceText || 'You have a reminder from your class chat.',
+        });
+      }
+    }
+
+    // 2. Item-Level Manual Reminder Offsets (1d, 3h, 1h)
     items.forEach((item) => {
       if (item.done || !item.deadline || !item.reminderOffset || item.reminderOffset === 'none') {
         return;
@@ -1297,7 +1620,7 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const triggerTime = getReminderTriggerTime(item.deadline, item.reminderOffset);
       if (!triggerTime) return;
 
-      const reminderKey = `${item.id}_${item.reminderOffset}`;
+      const reminderKey = `offset_${item.id}_${item.reminderOffset}`;
       if (now >= triggerTime.getTime() && !currentTriggered.has(reminderKey)) {
         newTriggered.push(reminderKey);
 
@@ -1308,26 +1631,104 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             ? 'in 3 hours'
             : 'in 1 hour';
 
-        // In-app toast for each triggered reminder
         showToast(`⏰ Reminder: "${item.title}" is due ${offsetLabel}!`);
 
-        // Browser notification
-        if (
-          'Notification' in window &&
-          Notification.permission === 'granted' &&
-          settings.browserNotificationsEnabled
-        ) {
-          try {
-            new Notification(`SyncPulse: ${item.title}`, {
-              body: `Due ${new Date(item.deadline).toLocaleString()} · ${item.details || 'Check your class tasks.'}`,
-              icon: '/favicon.ico',
-            });
-          } catch {
-            // Suppress notification errors in restricted browser sandbox
-          }
-        }
+        sendBrowserOrSWNotification(`SyncPulse: ${item.title}`, {
+          body: `Due ${new Date(item.deadline).toLocaleString()} · ${item.details || 'Check your class tasks.'}`,
+        });
       }
     });
+
+    // 3. Smart Nudges:
+    // - Incomplete assignments within 24h: repeated nudges at 24h, 6h, 2h, 30 min before
+    // - Meetings: nudges at 1 day, 1 hour, and 10 minutes before
+    if (settings.smartNudgesEnabled) {
+      items.forEach((item) => {
+        if (item.done) return;
+
+        // Assignments: nudges at 24h, 6h, 2h, 30m
+        if (item.type === 'assignment' && item.deadline) {
+          const dTime = new Date(item.deadline).getTime();
+          const diff = dTime - now;
+
+          if (diff > 0 && diff <= 24 * 3600 * 1000) {
+            const stages = [
+              { id: '30m', maxDiff: 30 * 60 * 1000, label: '30 minutes' },
+              { id: '2h', maxDiff: 2 * 3600 * 1000, label: '2 hours' },
+              { id: '6h', maxDiff: 6 * 3600 * 1000, label: '6 hours' },
+              { id: '24h', maxDiff: 24 * 3600 * 1000, label: '24 hours' },
+            ];
+
+            // Trigger the most urgent stage that hasn't fired yet
+            for (const s of stages) {
+              if (diff <= s.maxDiff) {
+                const nudgeKey = `nudge_asg_${item.id}_${s.id}`;
+                if (!currentTriggered.has(nudgeKey)) {
+                  newTriggered.push(nudgeKey);
+                  showToast(`⚠️ Assignment Nudge: "${item.title}" is due in ${s.label}!`);
+                  sendBrowserOrSWNotification(`⚠️ Assignment Nudge: ${item.title}`, {
+                    body: `Due in ${s.label} (${new Date(item.deadline).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })})! Complete before deadline.`,
+                  });
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        // Meetings: nudges at 1d, 1h, 10m
+        if (item.type === 'meeting' && (item.startTime || item.deadline)) {
+          const mTime = new Date(item.startTime || item.deadline!).getTime();
+          const mDiff = mTime - now;
+
+          if (mDiff > 0 && mDiff <= 24 * 3600 * 1000) {
+            const mStages = [
+              { id: '10m', maxDiff: 10 * 60 * 1000, label: '10 minutes' },
+              { id: '1h', maxDiff: 60 * 60 * 1000, label: '1 hour' },
+              { id: '1d', maxDiff: 24 * 3600 * 1000, label: '1 day' },
+            ];
+
+            for (const ms of mStages) {
+              if (mDiff <= ms.maxDiff) {
+                const mKey = `nudge_mtg_${item.id}_${ms.id}`;
+                if (!currentTriggered.has(mKey)) {
+                  newTriggered.push(mKey);
+                  showToast(`📅 Meeting Reminder: "${item.title}" starts in ${ms.label}!`);
+                  sendBrowserOrSWNotification(`📅 Meeting Reminder: ${item.title}`, {
+                    body: `Starts in ${ms.label} at ${new Date(item.startTime || item.deadline!).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`,
+                  });
+                  break;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 4. Daily Digest Automated Clock Check:
+    // Morning digest at settings.digestTime (default 08:00)
+    // Evening digest at settings.eveningDigestTime (default 21:00)
+    const currentH = String(new Date().getHours()).padStart(2, '0');
+    const currentM = String(new Date().getMinutes()).padStart(2, '0');
+    const currentTimeStr = `${currentH}:${currentM}`;
+    const todayDateKey = new Date().toISOString().split('T')[0];
+
+    if (settings.morningDigest && currentTimeStr === (settings.digestTime || '08:00')) {
+      const morningKey = `digest_morning_${todayDateKey}`;
+      if (!currentTriggered.has(morningKey)) {
+        newTriggered.push(morningKey);
+        triggerMorningDigest();
+      }
+    }
+
+    if (settings.eveningDigest && currentTimeStr === (settings.eveningDigestTime || '21:00')) {
+      const eveningKey = `digest_evening_${todayDateKey}`;
+      if (!currentTriggered.has(eveningKey)) {
+        newTriggered.push(eveningKey);
+        triggerEveningDigest();
+      }
+    }
 
     if (newTriggered.length > 0) {
       setTriggeredReminderKeys((prev) => {
@@ -1342,16 +1743,16 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  // Check reminders on mount and every minute (60 seconds)
+  // Check reminders on mount and every 15 seconds
   useEffect(() => {
     checkDueReminders();
 
     const interval = setInterval(() => {
       checkDueReminders();
-    }, 60000);
+    }, 15000);
 
     return () => clearInterval(interval);
-  }, [items, settings.browserNotificationsEnabled, triggeredReminderKeys]);
+  }, [items, messageReminders, settings, triggeredReminderKeys]);
 
   return (
     <SyncPulseContext.Provider
@@ -1410,6 +1811,25 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setIsNotificationModalOpen,
         requestNotificationPermission,
         checkDueReminders,
+        messageReminders,
+        addMessageReminder,
+        updateMessageReminder,
+        deleteMessageReminder,
+        snoozeMessageReminder,
+        toggleMessageReminderDone,
+        activeTriggeredReminder,
+        dismissTriggeredReminder,
+        highlightedMessageId,
+        setHighlightedMessageId,
+        isRemindersDrawerOpen,
+        setIsRemindersDrawerOpen,
+        openChatForReminder,
+        openChatForMessage,
+        triggerMorningDigest,
+        triggerEveningDigest,
+        activeReminderModalState,
+        openReminderModalForMessage,
+        closeReminderModal,
         toggleItemAlarm,
         toggleItemCalendarSync,
         exportItemCalendar,

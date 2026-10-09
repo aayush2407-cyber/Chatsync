@@ -19,6 +19,10 @@ import {
   Calendar,
   Smartphone,
   ExternalLink,
+  Clock,
+  CheckCircle2,
+  MessageSquare,
+  ChevronDown,
 } from 'lucide-react';
 import { useSyncPulse } from '../context/SyncPulseContext';
 import { ExtractedItem, ReminderOffset } from '../types';
@@ -49,6 +53,12 @@ export const SettingsPage: React.FC = () => {
     requestNotificationPermission,
     setIsNotificationModalOpen,
     exportAllUpcomingCalendar,
+    messageReminders,
+    snoozeMessageReminder,
+    toggleMessageReminderDone,
+    deleteMessageReminder,
+    openChatForReminder,
+    setIsRemindersDrawerOpen,
   } = useSyncPulse();
 
   // Profile local form state
@@ -56,6 +66,10 @@ export const SettingsPage: React.FC = () => {
   const [university, setUniversity] = useState(student.university);
   const [major, setMajor] = useState(student.major);
   const [semester, setSemester] = useState(student.semester);
+
+  // Reminders section local filter state
+  const [reminderFilter, setReminderFilter] = useState<'all' | 'pending' | 'done'>('pending');
+  const [activeSnoozeId, setActiveSnoozeId] = useState<string | null>(null);
 
   // Danger modal confirmations
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
@@ -386,6 +400,284 @@ export const SettingsPage: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Reminders Management Section */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <Bell className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Chat Reminders
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Manage, snooze, complete, or delete your scheduled message reminders
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsRemindersDrawerOpen(true)}
+              className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer min-h-[38px] flex items-center gap-1.5"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+              <span>Open Drawer</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="flex gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <button
+            type="button"
+            onClick={() => setReminderFilter('pending')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+              reminderFilter === 'pending'
+                ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            Pending ({messageReminders.filter((r) => r.status === 'pending' || r.status === 'triggered').length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setReminderFilter('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+              reminderFilter === 'all'
+                ? 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            All ({messageReminders.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setReminderFilter('done')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+              reminderFilter === 'done'
+                ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            Completed ({messageReminders.filter((r) => r.status === 'done').length})
+          </button>
+        </div>
+
+        {/* Reminders List */}
+        <div className="space-y-3">
+          {messageReminders
+            .filter((r) => {
+              if (reminderFilter === 'pending') return r.status === 'pending' || r.status === 'triggered';
+              if (reminderFilter === 'done') return r.status === 'done';
+              return true;
+            })
+            .length === 0 ? (
+            <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-2">
+              <Bell className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                {reminderFilter === 'pending'
+                  ? 'No pending reminders right now.'
+                  : reminderFilter === 'done'
+                  ? 'No completed reminders yet.'
+                  : 'No reminders have been created.'}
+              </p>
+              <p className="text-xs text-slate-400">
+                Open any chat in the <button onClick={() => setActiveTab('chats')} className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">Chats tab</button> and tap "Remind me" on a message.
+              </p>
+            </div>
+          ) : (
+            messageReminders
+              .filter((r) => {
+                if (reminderFilter === 'pending') return r.status === 'pending' || r.status === 'triggered';
+                if (reminderFilter === 'done') return r.status === 'done';
+                return true;
+              })
+              .map((r) => {
+                const chat = chats.find((c) => c.id === r.chatId);
+                const chatName = chat?.name || 'Class Chat';
+                const isDone = r.status === 'done';
+                const remindDate = new Date(r.remindAt);
+
+                return (
+                  <div
+                    key={r.id}
+                    className={`p-4 rounded-2xl border transition-all space-y-2.5 ${
+                      isDone
+                        ? 'bg-slate-50/60 dark:bg-slate-900/30 border-slate-200 dark:border-slate-800 opacity-80'
+                        : r.status === 'triggered'
+                        ? 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800'
+                        : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 shadow-xs'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                          {chatName}
+                        </span>
+                        {r.sender && (
+                          <>
+                            <span className="text-slate-300 dark:text-slate-700">·</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              {r.sender}
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          isDone
+                            ? 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                            : r.status === 'triggered'
+                            ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
+                            : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
+                        }`}
+                      >
+                        {isDone ? 'Done' : r.status === 'triggered' ? 'Triggered' : 'Scheduled'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4
+                        className={`text-sm font-semibold text-slate-900 dark:text-white ${
+                          isDone ? 'line-through text-slate-400 dark:text-slate-500' : ''
+                        }`}
+                      >
+                        {r.title || r.sourceText?.slice(0, 60) || 'Reminder'}
+                      </h4>
+
+                      {r.note && (
+                        <p className="mt-1 text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 rounded-lg px-2.5 py-1 font-medium border border-amber-200/50 dark:border-amber-800/50">
+                          Note: {r.note}
+                        </p>
+                      )}
+
+                      {r.sourceText && !r.note && (
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 italic line-clamp-2">
+                          "{r.sourceText}"
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        <span>
+                          {remindDate.toLocaleDateString([], { month: 'short', day: 'numeric' })} at{' '}
+                          {remindDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </span>
+
+                      {r.deadline && (
+                        <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400 font-medium">
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>
+                            Due {new Date(r.deadline).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                          </span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Actions: Snooze, Mark done, Open chat, Delete */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-1 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        {/* Toggle Done */}
+                        <button
+                          type="button"
+                          onClick={() => toggleMessageReminderDone(r.id)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 cursor-pointer min-h-[34px] transition-colors ${
+                            isDone
+                              ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                          }`}
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>{isDone ? 'Reopen' : 'Mark Done'}</span>
+                        </button>
+
+                        {/* Snooze options */}
+                        {!isDone && (
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setActiveSnoozeId(activeSnoozeId === r.id ? null : r.id)}
+                              className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-semibold flex items-center gap-1 cursor-pointer min-h-[34px]"
+                            >
+                              <Clock className="w-3.5 h-3.5 text-amber-500" />
+                              <span>Snooze</span>
+                              <ChevronDown className="w-3 h-3 text-slate-400" />
+                            </button>
+
+                            {activeSnoozeId === r.id && (
+                              <div className="absolute bottom-full mb-1 left-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-1.5 min-w-[130px] z-30 space-y-0.5 animate-in fade-in">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    snoozeMessageReminder(r.id, 10);
+                                    setActiveSnoozeId(null);
+                                  }}
+                                  className="w-full text-left px-2.5 py-1 rounded-md text-xs text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 cursor-pointer"
+                                >
+                                  10 minutes
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    snoozeMessageReminder(r.id, 60);
+                                    setActiveSnoozeId(null);
+                                  }}
+                                  className="w-full text-left px-2.5 py-1 rounded-md text-xs text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 cursor-pointer"
+                                >
+                                  1 hour
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    snoozeMessageReminder(r.id, 1440);
+                                    setActiveSnoozeId(null);
+                                  }}
+                                  className="w-full text-left px-2.5 py-1 rounded-md text-xs text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 cursor-pointer"
+                                >
+                                  Tomorrow
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        {/* Open Chat */}
+                        <button
+                          type="button"
+                          onClick={() => openChatForReminder(r)}
+                          className="px-2.5 py-1.5 rounded-xl text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-xs font-semibold flex items-center gap-1 cursor-pointer min-h-[34px]"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>Open chat</span>
+                        </button>
+
+                        {/* Delete */}
+                        <button
+                          type="button"
+                          onClick={() => deleteMessageReminder(r.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer min-h-[34px] min-w-[34px] flex items-center justify-center"
+                          title="Delete reminder"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+          )}
         </div>
       </div>
 

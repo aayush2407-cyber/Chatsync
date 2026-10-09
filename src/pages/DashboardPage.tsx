@@ -3,6 +3,7 @@ import {
   Sparkles,
   CheckCircle2,
   Calendar,
+  CalendarClock,
   Bell,
   ArrowRight,
   MessageSquare,
@@ -15,6 +16,8 @@ import {
   Video,
   RotateCw,
   ExternalLink,
+  Check,
+  CheckSquare,
 } from 'lucide-react';
 import { useSyncPulse } from '../context/SyncPulseContext';
 import { EmptyState } from '../components/EmptyState';
@@ -23,6 +26,7 @@ import { ReminderSelector } from '../components/ReminderSelector';
 import { CalendarButton } from '../components/CalendarButton';
 import { ItemRowSkeleton } from '../components/SkeletonLoader';
 import { needsAttentionToday, isDueThisWeek } from '../utils/deadlines';
+import { ExtractedItem, MessageReminder } from '../types';
 
 export const DashboardPage: React.FC = () => {
   const {
@@ -42,6 +46,10 @@ export const DashboardPage: React.FC = () => {
     setItemReminder,
     requestNotificationPermission,
     exportAllUpcomingCalendar,
+    messageReminders,
+    toggleMessageReminderDone,
+    openReminderModalForMessage,
+    openChatForMessage,
   } = useSyncPulse();
 
   const assignments = items.filter((i) => i.type === 'assignment');
@@ -58,10 +66,10 @@ export const DashboardPage: React.FC = () => {
     return (
       <div className="py-8">
         <div className="text-center mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#3F4A16] dark:text-[#EEF1DC] mb-2">
             Welcome to SyncPulse
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base max-w-md mx-auto">
+          <p className="text-[#6B7059] dark:text-[#A4AA8E] text-sm sm:text-base max-w-md mx-auto">
             AI Chat Hub: turn class chats into a clear to-do list.
           </p>
         </div>
@@ -96,22 +104,90 @@ export const DashboardPage: React.FC = () => {
     .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())
     .slice(0, 5);
 
+  // Today's plan calculations
+  const now = new Date();
+  const nowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const nowEnd = new Date(nowStart.getTime() + 86400000 - 1);
+
+  const todaysItems = items.filter((item) => {
+    const dStr = item.startTime || item.deadline;
+    if (!dStr) return false;
+    const d = new Date(dStr);
+    return !isNaN(d.getTime()) && d >= nowStart && d <= nowEnd;
+  });
+
+  const todaysReminders = messageReminders.filter((r) => {
+    const d = new Date(r.remindAt);
+    return !isNaN(d.getTime()) && d >= nowStart && d <= nowEnd;
+  });
+
+  interface TodayPlanRow {
+    id: string;
+    sourceType: 'item' | 'reminder';
+    type: 'assignment' | 'meeting' | 'date' | 'reminder' | 'notice';
+    title: string;
+    chatId: string;
+    chatName: string;
+    time: Date;
+    timeFormatted: string;
+    done: boolean;
+    rawItem?: ExtractedItem;
+    rawReminder?: MessageReminder;
+  }
+
+  const todayPlanRows: TodayPlanRow[] = [
+    ...todaysItems.map((item) => {
+      const d = new Date(item.startTime || item.deadline!);
+      return {
+        id: `plan-item-${item.id}`,
+        sourceType: 'item' as const,
+        type: item.type,
+        title: item.title,
+        chatId: item.chatId,
+        chatName: getChatName(item.chatId),
+        time: d,
+        timeFormatted: item.isAllDay
+          ? 'All Day'
+          : d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        done: item.done,
+        rawItem: item,
+      };
+    }),
+    ...todaysReminders.map((r) => {
+      const d = new Date(r.remindAt);
+      return {
+        id: `plan-rem-${r.id}`,
+        sourceType: 'reminder' as const,
+        type: 'reminder' as const,
+        title: r.title || r.note || r.sourceText?.slice(0, 48) || 'Message Reminder',
+        chatId: r.chatId,
+        chatName: getChatName(r.chatId),
+        time: d,
+        timeFormatted: d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        done: r.status === 'done',
+        rawReminder: r,
+      };
+    }),
+  ].sort((a, b) => a.time.getTime() - b.time.getTime());
+
+  const todayCompletedCount = todayPlanRows.filter((r) => r.done).length;
+
   return (
     <div className="space-y-6 sm:space-y-8 pb-10">
       {/* 1. TOP WARNING BANNER (When anything is overdue or due within 24 hours) */}
       {attentionCount > 0 && (
-        <div className="bg-gradient-to-r from-rose-50 via-amber-50 to-rose-50 dark:from-rose-950/80 dark:via-amber-950/50 dark:to-rose-950/80 border-2 border-rose-300 dark:border-rose-800 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md animate-in fade-in slide-in-from-top-2">
+        <div className="bg-[#FEFCE8] dark:bg-[#28220A] border-2 border-[#FEF08A] dark:border-[#854D0E] rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-2">
           <div className="flex items-start sm:items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-rose-500 text-white flex items-center justify-center shrink-0 shadow-sm animate-pulse">
+            <div className="w-11 h-11 rounded-2xl bg-[#D98324] text-white flex items-center justify-center shrink-0 shadow-sm animate-pulse">
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-base sm:text-lg font-black text-rose-950 dark:text-rose-100 flex items-center gap-2">
+              <div className="text-base sm:text-lg font-black text-[#78350F] dark:text-[#FEF08A] flex items-center gap-2">
                 <span>
                   {attentionCount} {attentionCount === 1 ? 'assignment needs' : 'assignments need'} attention today
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-rose-800 dark:text-rose-300 font-medium">
+              <p className="text-xs sm:text-sm text-[#C0392B] dark:text-[#F87171] font-semibold">
                 {urgentAttentionItems.filter((i) => new Date(i.deadline!).getTime() < Date.now()).length > 0
                   ? 'Urgent: Some deadlines are overdue or expiring within 24 hours!'
                   : 'Due in less than 24 hours. Review and complete your tasks now.'}
@@ -122,7 +198,7 @@ export const DashboardPage: React.FC = () => {
           <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
             <button
               onClick={() => setActiveTab('assignments')}
-              className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm hover:shadow cursor-pointer min-h-[44px] flex items-center gap-2"
+              className="px-5 py-2.5 bg-[#C0392B] hover:bg-[#A93226] text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer min-h-[44px] flex items-center gap-2"
             >
               <span>Open urgent items</span>
               <ArrowRight className="w-4 h-4" />
@@ -132,17 +208,17 @@ export const DashboardPage: React.FC = () => {
       )}
 
       {/* 2. Welcome Header & AI Pulse Banner */}
-      <div className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-br from-[#3F4A16] via-[#2E3710] to-[#1D2112] border border-[#5A6823]/40 rounded-3xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
         <div className="relative z-10 max-w-2xl">
-          <div className="flex items-center gap-2 text-indigo-300 text-xs sm:text-sm font-semibold mb-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400" />
+          <div className="flex items-center gap-2 text-[#DDE3BE] text-xs sm:text-sm font-semibold mb-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-[#9AAE3C]" />
             <span>AI Chat Hub Active</span>
             <span aria-hidden="true">·</span>
             <span>{student.semester}</span>
             {totalCasualIgnored > 0 && (
               <>
                 <span aria-hidden="true">·</span>
-                <span className="text-emerald-300 font-normal">
+                <span className="text-[#EEF1DC] font-normal">
                   {totalCasualIgnored} casual chats filtered out
                 </span>
               </>
@@ -152,7 +228,7 @@ export const DashboardPage: React.FC = () => {
           <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-2 text-white">
             Hello, {student.name.split(' ')[0]} 👋
           </h1>
-          <p className="text-indigo-100/90 text-sm sm:text-base mb-6 leading-relaxed">
+          <p className="text-[#EEF1DC]/90 text-sm sm:text-base mb-6 leading-relaxed">
             Turn class chats into a clear to-do list. We have organized deadlines and reminders from your WhatsApp, Telegram, Slack, and Discord study groups.
           </p>
 
@@ -160,27 +236,27 @@ export const DashboardPage: React.FC = () => {
             <button
               onClick={summariseAllChatsAI}
               disabled={isSummarising}
-              className="px-5 py-2.5 rounded-xl bg-white text-indigo-950 hover:bg-indigo-50 font-bold text-xs sm:text-sm transition-all shadow-md flex items-center gap-2 cursor-pointer min-h-[44px]"
+              className="px-5 py-2.5 rounded-xl bg-white text-[#3F4A16] hover:bg-[#EEF1DC] font-bold text-xs sm:text-sm transition-all shadow-md flex items-center gap-2 cursor-pointer min-h-[44px]"
             >
-              <Sparkles className="w-4 h-4 text-indigo-600" />
+              <Sparkles className="w-4 h-4 text-[#6B7A2A]" />
               <span>Summarise all chats</span>
             </button>
 
             <button
               onClick={runAIScan}
               disabled={isScanning}
-              className="px-4 py-2.5 rounded-xl bg-indigo-500/30 hover:bg-indigo-500/40 text-white font-medium text-xs sm:text-sm transition-colors cursor-pointer min-h-[44px] flex items-center gap-1.5 border border-indigo-400/40"
+              className="px-4 py-2.5 rounded-xl bg-[#6B7A2A]/40 hover:bg-[#6B7A2A]/60 text-white font-medium text-xs sm:text-sm transition-colors cursor-pointer min-h-[44px] flex items-center gap-1.5 border border-[#DDE3BE]/30"
             >
-              <RefreshCw className={`w-4 h-4 text-indigo-200 ${isScanning ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 text-[#DDE3BE] ${isScanning ? 'animate-spin' : ''}`} />
               <span>{isScanning ? 'Scanning...' : 'Quick Scan'}</span>
             </button>
 
             {!hasDemoData && (
               <button
                 onClick={loadDemoMode}
-                className="px-4 py-2.5 rounded-xl bg-indigo-500/30 hover:bg-indigo-500/40 text-white font-semibold text-xs sm:text-sm transition-colors cursor-pointer min-h-[44px] flex items-center gap-1.5 border border-indigo-400/40"
+                className="px-4 py-2.5 rounded-xl bg-[#6B7A2A]/40 hover:bg-[#6B7A2A]/60 text-white font-semibold text-xs sm:text-sm transition-colors cursor-pointer min-h-[44px] flex items-center gap-1.5 border border-[#DDE3BE]/30"
               >
-                <Sparkles className="w-4 h-4 text-amber-300" />
+                <Sparkles className="w-4 h-4 text-[#C9A227]" />
                 <span>Try demo mode</span>
               </button>
             )}
@@ -196,96 +272,273 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Soft background glow */}
-        <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-[#6B7A2A]/20 rounded-full blur-3xl pointer-events-none" />
       </div>
+
+      {/* HIGHLIGHTED "TODAY'S PLAN" SECTION */}
+      <section className="bg-white dark:bg-[#1D2112] rounded-3xl p-5 sm:p-6 border border-[#E3E6D3] dark:border-[#2B321A] shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E3E6D3] dark:border-[#2B321A]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#6B7A2A] text-white flex items-center justify-center shadow-xs shrink-0">
+              <CalendarClock className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-lg font-bold text-[#3F4A16] dark:text-[#EEF1DC]">
+                  Today's plan
+                </h2>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#EEF1DC] dark:bg-[#283017] text-[#3F4A16] dark:text-[#EEF1DC] border border-[#DDE3BE] dark:border-[#384221] tabular-nums">
+                  {todayPlanRows.length} {todayPlanRows.length === 1 ? 'item' : 'items'}
+                </span>
+                {todayPlanRows.length > 0 && (
+                  <span className="text-xs text-[#6B7059] dark:text-[#A4AA8E] font-medium">
+                    ({todayCompletedCount} of {todayPlanRows.length} completed)
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-[#6B7059] dark:text-[#A4AA8E] mt-0.5">
+                {now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} · Scheduled across all your class chats
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setActiveTab('agenda')}
+            className="self-start sm:self-center px-3.5 py-2 rounded-xl bg-white dark:bg-[#1D2112] border border-[#E3E6D3] dark:border-[#2B321A] hover:bg-[#EEF1DC] dark:hover:bg-[#283017] text-[#3F4A16] dark:text-[#EEF1DC] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs min-h-[38px]"
+          >
+            <span>Open Agenda</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {todayPlanRows.length === 0 ? (
+          <div className="py-6 px-4 bg-[#F7F8F2] dark:bg-[#14170D] rounded-2xl border border-[#E3E6D3] dark:border-[#2B321A] text-center space-y-2">
+            <div className="w-9 h-9 rounded-full bg-[#EEF1DC] dark:bg-[#283017] text-[#6B7A2A] dark:text-[#9AAE3C] flex items-center justify-center mx-auto">
+              <Check className="w-5 h-5 stroke-[2.5]" />
+            </div>
+            <p className="text-sm font-bold text-[#3F4A16] dark:text-[#EEF1DC]">
+              Nothing due today — you're completely caught up!
+            </p>
+            <p className="text-xs text-[#6B7059] dark:text-[#A4AA8E] max-w-md mx-auto">
+              Check upcoming deadlines for tomorrow and this week in your full timeline.
+            </p>
+            <button
+              onClick={() => setActiveTab('agenda')}
+              className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#6B7A2A] dark:text-[#9AAE3C] hover:underline cursor-pointer"
+            >
+              <span>View upcoming days in Agenda</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {todayPlanRows.map((row) => (
+              <div
+                key={row.id}
+                className={`p-3.5 sm:p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs ${
+                  row.done
+                    ? 'bg-[#F7F8F2] dark:bg-[#14170D] border-[#E3E6D3] dark:border-[#2B321A] opacity-60'
+                    : 'bg-white dark:bg-[#1D2112] border-[#E3E6D3] dark:border-[#2B321A] hover:border-[#6B7A2A] dark:hover:border-[#9AAE3C]'
+                }`}
+              >
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (row.sourceType === 'item' && row.rawItem) {
+                        toggleDone(row.rawItem.id);
+                      } else if (row.sourceType === 'reminder' && row.rawReminder) {
+                        toggleMessageReminderDone(row.rawReminder.id);
+                      }
+                    }}
+                    className={`mt-0.5 w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 cursor-pointer transition-colors ${
+                      row.done
+                        ? 'bg-[#6B7A2A] border-[#6B7A2A] text-white'
+                        : 'border-[#E3E6D3] dark:border-[#384221] hover:border-[#6B7A2A] bg-white dark:bg-[#1D2112]'
+                    }`}
+                    aria-label={row.done ? 'Mark incomplete' : 'Mark done'}
+                  >
+                    {row.done && <Check className="w-4 h-4 stroke-[3]" />}
+                  </button>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                      <span className="text-xs font-bold text-[#2B2F1E] dark:text-[#EEF1DC] tabular-nums">
+                        {row.timeFormatted}
+                      </span>
+                      <span
+                        className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                          row.type === 'assignment'
+                            ? 'bg-[#EEF1DC] dark:bg-[#283017] text-[#3F4A16] dark:text-[#EEF1DC]'
+                            : row.type === 'meeting'
+                            ? 'bg-[#DDE3BE] dark:bg-[#343C1F] text-[#3F4A16] dark:text-[#EEF1DC]'
+                            : row.type === 'date'
+                            ? 'bg-[#EEF1DC] dark:bg-[#283017] text-[#3F4A16] dark:text-[#EEF1DC]'
+                            : 'bg-[#FEF08A] dark:bg-[#382F10] text-[#78350F] dark:text-[#FEF08A]'
+                        }`}
+                      >
+                        {row.type}
+                      </span>
+                      <span className="text-[11px] font-semibold text-[#6B7A2A] dark:text-[#9AAE3C] bg-[#EEF1DC] dark:bg-[#283017] px-2 py-0.5 rounded-md truncate max-w-[140px]">
+                        {row.chatName}
+                      </span>
+                    </div>
+
+                    <h3
+                      className={`text-sm font-bold text-[#2B2F1E] dark:text-[#EEF1DC] leading-snug ${
+                        row.done ? 'line-through text-[#6B7059] dark:text-[#A4AA8E]' : ''
+                      }`}
+                    >
+                      {row.title}
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+                  {row.rawItem && <CalendarButton item={row.rawItem} size="sm" />}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (row.rawItem) {
+                        const msg = messages.find(
+                          (m) => m.chatId === row.chatId && m.text.includes(row.rawItem!.title)
+                        ) || {
+                          id: `msg-${row.rawItem.id}`,
+                          chatId: row.chatId,
+                          sender: row.rawItem.sender,
+                          text: row.rawItem.details || row.rawItem.title,
+                          timestamp: row.time.toISOString(),
+                          hash: 'h-today',
+                        };
+                        openReminderModalForMessage(msg, row.rawItem);
+                      } else if (row.rawReminder) {
+                        const msg = messages.find((m) => m.id === row.rawReminder!.messageId) || {
+                          id: row.rawReminder.messageId,
+                          chatId: row.rawReminder.chatId,
+                          sender: row.rawReminder.sender || 'Classmate',
+                          text: row.rawReminder.sourceText || row.rawReminder.title || '',
+                          timestamp: row.time.toISOString(),
+                          hash: 'h-today-rem',
+                        };
+                        openReminderModalForMessage(msg, null);
+                      }
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl border border-[#E3E6D3] dark:border-[#2B321A] hover:bg-[#EEF1DC] dark:hover:bg-[#283017] text-[#2B2F1E] dark:text-[#EEF1DC] text-xs font-semibold flex items-center gap-1 cursor-pointer min-h-[34px] transition-colors"
+                    title="Remind me"
+                  >
+                    <Bell className="w-3.5 h-3.5 text-[#D98324]" />
+                    <span className="hidden sm:inline">Remind</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (row.rawReminder) {
+                        openChatForMessage(row.chatId, row.rawReminder.messageId);
+                      } else {
+                        openChatForMessage(row.chatId);
+                      }
+                    }}
+                    className="p-1.5 rounded-xl text-[#6B7059] dark:text-[#A4AA8E] hover:text-[#6B7A2A] dark:hover:text-[#9AAE3C] hover:bg-[#EEF1DC]/60 dark:hover:bg-[#283017]/60 transition-colors cursor-pointer min-h-[34px] min-w-[34px] flex items-center justify-center"
+                    title="Open message in chat"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* 3. FOUR CARDS: Pending assignments, Deadlines this week, Latest notices, Chats connected */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1: Pending assignments */}
         <button
           onClick={() => setActiveTab('assignments')}
-          className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm text-left hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer group"
+          className="bg-white dark:bg-[#1D2112] p-4 sm:p-5 rounded-2xl border border-[#E3E6D3] dark:border-[#2B321A] shadow-sm text-left hover:border-[#6B7A2A] dark:hover:border-[#9AAE3C] transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+            <span className="text-xs font-bold text-[#6B7059] dark:text-[#A4AA8E]">
               Pending assignments
             </span>
-            <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-[#EEF1DC] dark:bg-[#283017] text-[#6B7A2A] dark:text-[#9AAE3C] flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tabular-nums">
+          <div className="text-2xl sm:text-3xl font-bold text-[#2B2F1E] dark:text-[#EEF1DC] tabular-nums">
             {pendingAssignments.length}
           </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
+          <div className="text-[11px] text-[#6B7059] dark:text-[#A4AA8E] mt-1 flex items-center justify-between">
             <span>{assignments.filter((a) => a.done).length} completed</span>
-            <span className="text-indigo-600 dark:text-indigo-400 font-semibold group-hover:underline">View →</span>
+            <span className="text-[#6B7A2A] dark:text-[#9AAE3C] font-semibold group-hover:underline">View →</span>
           </div>
         </button>
 
         {/* Card 2: Deadlines this week */}
         <button
           onClick={() => setActiveTab('dates')}
-          className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm text-left hover:border-amber-300 dark:hover:border-amber-700 transition-all cursor-pointer group"
+          className="bg-white dark:bg-[#1D2112] p-4 sm:p-5 rounded-2xl border border-[#E3E6D3] dark:border-[#2B321A] shadow-sm text-left hover:border-[#6B7A2A] dark:hover:border-[#9AAE3C] transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+            <span className="text-xs font-bold text-[#6B7059] dark:text-[#A4AA8E]">
               Deadlines this week
             </span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-[#EEF1DC] dark:bg-[#283017] text-[#6B7A2A] dark:text-[#9AAE3C] flex items-center justify-center">
               <Calendar className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tabular-nums">
+          <div className="text-2xl sm:text-3xl font-bold text-[#2B2F1E] dark:text-[#EEF1DC] tabular-nums">
             {deadlinesThisWeekItems.length}
           </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
+          <div className="text-[11px] text-[#6B7059] dark:text-[#A4AA8E] mt-1 flex items-center justify-between">
             <span>Exams & submissions</span>
-            <span className="text-amber-600 dark:text-amber-400 font-semibold group-hover:underline">View →</span>
+            <span className="text-[#6B7A2A] dark:text-[#9AAE3C] font-semibold group-hover:underline">View →</span>
           </div>
         </button>
 
         {/* Card 3: Latest notices */}
         <button
           onClick={() => setActiveTab('notices')}
-          className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm text-left hover:border-violet-300 dark:hover:border-violet-700 transition-all cursor-pointer group"
+          className="bg-white dark:bg-[#1D2112] p-4 sm:p-5 rounded-2xl border border-[#E3E6D3] dark:border-[#2B321A] shadow-sm text-left hover:border-[#6B7A2A] dark:hover:border-[#9AAE3C] transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+            <span className="text-xs font-bold text-[#6B7059] dark:text-[#A4AA8E]">
               Latest notices
             </span>
-            <div className="w-8 h-8 rounded-xl bg-violet-50 dark:bg-violet-950/60 text-violet-600 dark:text-violet-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-[#EEF1DC] dark:bg-[#283017] text-[#6B7A2A] dark:text-[#9AAE3C] flex items-center justify-center">
               <Bell className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tabular-nums">
+          <div className="text-2xl sm:text-3xl font-bold text-[#2B2F1E] dark:text-[#EEF1DC] tabular-nums">
             {notices.length}
           </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
+          <div className="text-[11px] text-[#6B7059] dark:text-[#A4AA8E] mt-1 flex items-center justify-between">
             <span>Circulars & circulars</span>
-            <span className="text-violet-600 dark:text-violet-400 font-semibold group-hover:underline">View →</span>
+            <span className="text-[#6B7A2A] dark:text-[#9AAE3C] font-semibold group-hover:underline">View →</span>
           </div>
         </button>
 
         {/* Card 4: Chats connected */}
         <button
           onClick={() => setActiveTab('chats')}
-          className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm text-left hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer group"
+          className="bg-white dark:bg-[#1D2112] p-4 sm:p-5 rounded-2xl border border-[#E3E6D3] dark:border-[#2B321A] shadow-sm text-left hover:border-[#6B7A2A] dark:hover:border-[#9AAE3C] transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+            <span className="text-xs font-bold text-[#6B7059] dark:text-[#A4AA8E]">
               Chats connected
             </span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-[#EEF1DC] dark:bg-[#283017] text-[#6B7A2A] dark:text-[#9AAE3C] flex items-center justify-center">
               <MessageSquare className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tabular-nums">
+          <div className="text-2xl sm:text-3xl font-bold text-[#2B2F1E] dark:text-[#EEF1DC] tabular-nums">
             {chats.length}
           </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
+          <div className="text-[11px] text-[#6B7059] dark:text-[#A4AA8E] mt-1 flex items-center justify-between">
             <span>{messages.length} messages</span>
-            <span className="text-indigo-600 dark:text-indigo-400 font-semibold group-hover:underline">Open →</span>
+            <span className="text-[#6B7A2A] dark:text-[#9AAE3C] font-semibold group-hover:underline">Open →</span>
           </div>
         </button>
       </div>
@@ -293,33 +546,33 @@ export const DashboardPage: React.FC = () => {
       {/* 4. MAIN SPLIT: "NEXT UP" (5 NEAREST UNFINISHED DEADLINES) + CHAT SUMMARIES */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: "Next up" list showing the 5 nearest unfinished deadlines */}
-        <div className="lg:col-span-8 bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="lg:col-span-8 bg-white dark:bg-[#1D2112] rounded-3xl p-5 sm:p-6 border border-[#E3E6D3] dark:border-[#2B321A] shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                <Clock className="w-5 h-5 text-[#6B7A2A] dark:text-[#9AAE3C]" />
+                <h2 className="text-lg font-bold text-[#3F4A16] dark:text-[#EEF1DC]">
                   Next up
                 </h2>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-[#6B7059] dark:text-[#A4AA8E] mt-0.5">
                 The 5 nearest unfinished deadlines across all your classes
               </p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={exportAllUpcomingCalendar}
-                className="px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800/80 bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer min-h-[36px]"
+                className="px-2.5 py-1.5 rounded-xl border border-[#E3E6D3] dark:border-[#2B321A] bg-white dark:bg-[#1D2112] text-[#3F4A16] dark:text-[#EEF1DC] hover:bg-[#EEF1DC] dark:hover:bg-[#283017] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer min-h-[36px]"
                 title="Export all unfinished upcoming items to calendar (.ics)"
               >
-                <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <Calendar className="w-3.5 h-3.5 text-[#6B7A2A] dark:text-[#9AAE3C]" />
                 <span className="hidden sm:inline">Add all to calendar</span>
                 <span className="sm:hidden">Calendar</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('assignments')}
-                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer min-h-[36px]"
+                className="text-xs font-semibold text-[#6B7A2A] dark:text-[#9AAE3C] hover:underline flex items-center gap-1 cursor-pointer min-h-[36px]"
               >
                 <span>View all</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -334,12 +587,12 @@ export const DashboardPage: React.FC = () => {
               <ItemRowSkeleton />
             </div>
           ) : nextUpItems.length === 0 ? (
-            <div className="text-center py-10 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-              <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+            <div className="text-center py-10 bg-[#F7F8F2] dark:bg-[#14170D] rounded-2xl border border-dashed border-[#E3E6D3] dark:border-[#2B321A]">
+              <CheckCircle2 className="w-8 h-8 text-[#6B7A2A] dark:text-[#9AAE3C] mx-auto mb-2" />
+              <p className="text-sm font-bold text-[#3F4A16] dark:text-[#EEF1DC]">
                 You’re all caught up!
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+              <p className="text-xs text-[#6B7059] dark:text-[#A4AA8E] mt-1 max-w-sm mx-auto">
                 No unfinished deadlines right now. New deadlines from imported class chats will automatically appear here.
               </p>
             </div>
@@ -348,13 +601,13 @@ export const DashboardPage: React.FC = () => {
               {nextUpItems.map((item) => (
                 <div
                   key={item.id}
-                  className="p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-850/80 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
+                  className="p-3.5 sm:p-4 rounded-2xl border border-[#E3E6D3] dark:border-[#2B321A] bg-white dark:bg-[#1D2112] hover:border-[#6B7A2A] dark:hover:border-[#9AAE3C] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
                 >
                   <div className="flex items-start gap-3 flex-1 min-w-0">
                     <button
                       onClick={() => toggleDone(item.id)}
                       aria-label={`Mark ${item.title} done`}
-                      className="mt-0.5 w-6 h-6 rounded-lg border border-slate-300 dark:border-slate-600 hover:border-indigo-500 flex items-center justify-center shrink-0 cursor-pointer min-h-[36px] min-w-[36px] transition-colors"
+                      className="mt-0.5 w-6 h-6 rounded-lg border border-[#E3E6D3] dark:border-[#384221] hover:border-[#6B7A2A] flex items-center justify-center shrink-0 cursor-pointer min-h-[36px] min-w-[36px] transition-colors"
                     >
                       <Circle className="w-3.5 h-3.5 text-transparent" />
                     </button>
@@ -364,52 +617,52 @@ export const DashboardPage: React.FC = () => {
                         {/* Colour-coded deadline badge */}
                         <DeadlineBadge deadline={item.deadline} done={item.done} size="sm" />
 
-                        <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                        <span className="text-[11px] font-semibold text-[#6B7A2A] dark:text-[#9AAE3C]">
                           {getChatName(item.chatId)}
                         </span>
 
                         {(item.chatId.startsWith('chat-demo') ||
                           chats.find((c) => c.id === item.chatId)?.source === 'demo') && (
-                          <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.2 rounded-md flex items-center gap-1">
+                          <span className="text-[10px] font-semibold text-[#6B7A2A] dark:text-[#9AAE3C] bg-[#EEF1DC] dark:bg-[#283017] px-1.5 py-0.2 rounded-md flex items-center gap-1">
                             <Sparkles className="w-2.5 h-2.5" /> Demo data
                           </span>
                         )}
 
                         {item.type === 'meeting' && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#DDE3BE] dark:bg-[#343C1F] text-[#3F4A16] dark:text-[#EEF1DC] flex items-center gap-1">
                             <Video className="w-3 h-3" />
                             <span>Meeting</span>
                           </span>
                         )}
 
                         {item.isRescheduled && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/90 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1">
-                            <RotateCw className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FEF08A] dark:bg-[#382F10] text-[#78350F] dark:text-[#FEF08A] border border-[#FDE047] dark:border-[#854D0E] flex items-center gap-1">
+                            <RotateCw className="w-3 h-3 text-[#D98324]" />
                             <span>Rescheduled</span>
                           </span>
                         )}
 
                         {item.isCalendarSynced && (
                           <span
-                            className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1"
+                            className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-[#EEF1DC] dark:bg-[#283017] text-[#3F4A16] dark:text-[#EEF1DC] border border-[#DDE3BE] dark:border-[#384221] flex items-center gap-1"
                             title="Synced to calendar"
                           >
-                            <Calendar className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                            <Calendar className="w-2.5 h-2.5 text-[#6B7A2A] dark:text-[#9AAE3C]" />
                             <span>Synced</span>
                           </span>
                         )}
 
-                        <span className="text-[11px] text-slate-400 capitalize">
+                        <span className="text-[11px] text-[#6B7059] dark:text-[#A4AA8E] capitalize">
                           · {item.type}
                         </span>
                       </div>
 
-                      <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-snug">
+                      <h3 className="text-sm sm:text-base font-bold text-[#2B2F1E] dark:text-[#EEF1DC] leading-snug">
                         {item.title}
                       </h3>
 
                       {item.details && (
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 line-clamp-1">
+                        <p className="text-xs text-[#6B7059] dark:text-[#A4AA8E] mt-0.5 line-clamp-1">
                           {item.details}
                         </p>
                       )}
@@ -423,7 +676,7 @@ export const DashboardPage: React.FC = () => {
                         href={item.meetingLink.startsWith('http') ? item.meetingLink : `https://${item.meetingLink}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center gap-1 shadow-xs transition-colors min-h-[36px] cursor-pointer"
+                        className="px-3 py-1.5 rounded-xl bg-[#6B7A2A] hover:bg-[#5A6823] active:bg-[#4A561C] text-white font-semibold text-xs flex items-center gap-1 shadow-xs transition-colors min-h-[36px] cursor-pointer"
                         aria-label={`Join meeting for ${item.title}`}
                       >
                         <Video className="w-3.5 h-3.5" />
@@ -442,7 +695,7 @@ export const DashboardPage: React.FC = () => {
 
                     <button
                       onClick={() => setActiveTab(item.type === 'assignment' ? 'assignments' : 'dates')}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center"
+                      className="p-1.5 rounded-lg text-[#6B7059] dark:text-[#A4AA8E] hover:text-[#6B7A2A] dark:hover:text-[#9AAE3C] transition-colors cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center"
                       title="Open details"
                     >
                       <ArrowRight className="w-4 h-4" />
@@ -453,11 +706,11 @@ export const DashboardPage: React.FC = () => {
             </div>
           )}
 
-          <div className="pt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+          <div className="pt-2 flex items-center justify-between text-xs text-[#6B7059] dark:text-[#A4AA8E]">
             <span>Showing top 5 nearest deadlines</span>
             <button
               onClick={() => setActiveTab('assignments')}
-              className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+              className="font-semibold text-[#6B7A2A] dark:text-[#9AAE3C] hover:underline cursor-pointer"
             >
               See all tasks ({assignments.length}) →
             </button>
@@ -467,20 +720,20 @@ export const DashboardPage: React.FC = () => {
         {/* Right Column: Latest Notices & Chat Summaries */}
         <div className="lg:col-span-4 space-y-6">
           {/* Latest Notices */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+          <div className="bg-white dark:bg-[#1D2112] rounded-3xl p-5 sm:p-6 border border-[#E3E6D3] dark:border-[#2B321A] shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <Bell className="w-4 h-4 text-violet-500" />
+                <h2 className="text-base font-bold text-[#3F4A16] dark:text-[#EEF1DC] flex items-center gap-1.5">
+                  <Bell className="w-4 h-4 text-[#6B7A2A]" />
                   <span>Important Notices</span>
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-[#6B7059] dark:text-[#A4AA8E]">
                   From university faculty & circulars
                 </p>
               </div>
               <button
                 onClick={() => setActiveTab('notices')}
-                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer min-h-[36px] flex items-center gap-1"
+                className="text-xs font-semibold text-[#6B7A2A] dark:text-[#9AAE3C] hover:underline cursor-pointer min-h-[36px] flex items-center gap-1"
               >
                 <span>View all</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -488,7 +741,7 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             {notices.length === 0 ? (
-              <p className="text-xs text-slate-500 dark:text-slate-400 py-4 text-center">
+              <p className="text-xs text-[#6B7059] dark:text-[#A4AA8E] py-4 text-center">
                 No circulars or notices extracted yet.
               </p>
             ) : (
@@ -496,19 +749,19 @@ export const DashboardPage: React.FC = () => {
                 {notices.slice(0, 3).map((notice) => (
                   <div
                     key={notice.id}
-                    className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800"
+                    className="p-3 rounded-2xl bg-[#F7F8F2] dark:bg-[#14170D] border border-[#E3E6D3] dark:border-[#2B321A]"
                   >
                     <div className="flex items-center justify-between text-[11px] mb-1">
-                      <span className="font-bold text-violet-700 dark:text-violet-300">
+                      <span className="font-bold text-[#3F4A16] dark:text-[#EEF1DC]">
                         {getChatName(notice.chatId)}
                       </span>
-                      <span className="text-slate-400">{notice.sender}</span>
+                      <span className="text-[#6B7059] dark:text-[#A4AA8E]">{notice.sender}</span>
                     </div>
-                    <h4 className="text-xs font-semibold text-slate-900 dark:text-white leading-snug">
+                    <h4 className="text-xs font-semibold text-[#2B2F1E] dark:text-[#EEF1DC] leading-snug">
                       {notice.title}
                     </h4>
                     {notice.details && (
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
+                      <p className="text-[11px] text-[#6B7059] dark:text-[#A4AA8E] mt-1 line-clamp-2">
                         {notice.details}
                       </p>
                     )}
@@ -520,14 +773,14 @@ export const DashboardPage: React.FC = () => {
 
           {/* Chat Summary Highlights */}
           {summaries.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+            <div className="bg-white dark:bg-[#1D2112] rounded-3xl p-5 sm:p-6 border border-[#E3E6D3] dark:border-[#2B321A] shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-indigo-500" />
+                  <h2 className="text-base font-bold text-[#3F4A16] dark:text-[#EEF1DC] flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#6B7A2A]" />
                     <span>Filtered Casual Chat</span>
                   </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-[#6B7059] dark:text-[#A4AA8E]">
                     Casual messages skipped by AI
                   </p>
                 </div>
@@ -537,19 +790,19 @@ export const DashboardPage: React.FC = () => {
                 {summaries.slice(0, 2).map((sum) => (
                   <div
                     key={sum.id}
-                    className="p-3 rounded-2xl bg-indigo-50/40 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 text-xs"
+                    className="p-3 rounded-2xl bg-[#EEF1DC]/60 dark:bg-[#283017]/60 border border-[#DDE3BE] dark:border-[#384221] text-xs"
                   >
                     <div className="flex items-center justify-between mb-1 text-[11px]">
-                      <span className="font-bold text-indigo-950 dark:text-indigo-200">
+                      <span className="font-bold text-[#3F4A16] dark:text-[#EEF1DC]">
                         {getChatName(sum.chatId)}
                       </span>
-                      <span className="text-slate-500 dark:text-slate-400">
+                      <span className="text-[#6B7059] dark:text-[#A4AA8E]">
                         {sum.casualCount} casual chats skipped
                       </span>
                     </div>
 
                     {sum.casualHighlights.length > 0 && (
-                      <p className="text-[11px] text-slate-600 dark:text-slate-300 italic">
+                      <p className="text-[11px] text-[#6B7059] dark:text-[#A4AA8E] italic">
                         "{sum.casualHighlights[0]}"
                       </p>
                     )}

@@ -185,3 +185,33 @@ export function getReminderTriggerTime(
 
   return new Date(d.getTime() - offsetMs);
 }
+
+/**
+ * Formats deadline / start time for in-chat detected item tags:
+ * e.g. "due Fri, Oct 16", "due today", "at 4:00 PM"
+ */
+export function formatItemTagDeadline(deadlineOrStartTime: string | null | undefined, isMeeting = false): string {
+  if (!deadlineOrStartTime) return '';
+  const d = new Date(deadlineOrStartTime);
+  if (isNaN(d.getTime())) return '';
+
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow = d.toDateString() === tomorrow.toDateString();
+
+  const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
+  const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const timeStr = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+  if (isMeeting) {
+    if (isToday) return `today ${timeStr}`;
+    if (isTomorrow) return `tomorrow ${timeStr}`;
+    return `${weekday}, ${timeStr}`;
+  }
+
+  if (isToday) return 'due today';
+  if (isTomorrow) return 'due tomorrow';
+  return `due ${weekday}, ${monthDay}`;
+}

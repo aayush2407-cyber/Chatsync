@@ -17,11 +17,15 @@ import {
   ChevronRight,
   Filter,
   Video,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useSyncPulse } from '../context/SyncPulseContext';
 import { ChatSource, ExtractedItemType, ItemPriority, Message, ExtractedItem, Chat } from '../types';
 import { EmptyState } from '../components/EmptyState';
 import { ChatCardSkeleton } from '../components/SkeletonLoader';
+import { CalendarButton } from '../components/CalendarButton';
+import { formatItemTagDeadline } from '../utils/deadlines';
 
 export const ChatsPage: React.FC = () => {
   const {
@@ -40,11 +44,27 @@ export const ChatsPage: React.FC = () => {
     setActiveTab,
     selectedChatId,
     setSelectedChatId,
+    messageReminders,
+    openReminderModalForMessage,
+    highlightedMessageId,
+    showToast,
   } = useSyncPulse();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [sourceFilter, setSourceFilter] = useState<'all' | ChatSource>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+
+  const handleCopyMessage = (msg: Message) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(msg.text).catch(() => {});
+    }
+    setCopiedMsgId(msg.id);
+    showToast('Message copied to clipboard');
+    setTimeout(() => {
+      setCopiedMsgId(null);
+    }, 2000);
+  };
 
   // Form state for paste/simulate message
   const [senderName, setSenderName] = useState('Prof. Alan Turing');
@@ -297,12 +317,27 @@ export const ChatsPage: React.FC = () => {
           <div className="space-y-3">
             {currentChatMessages.map((msg) => {
               const isSummarised = selectedChat.summarisedMessageIds?.includes(msg.id);
-              const isExtracted = chatItems.some((i) => i.sourceMessage === msg.text);
+              const matchingItem = chatItems.find(
+                (i) =>
+                  i.sourceMessage === msg.text ||
+                  msg.text.includes(i.sourceMessage) ||
+                  (i.sourceMessage && i.sourceMessage.length > 15 && msg.text.includes(i.sourceMessage.slice(0, 30))) ||
+                  (msg.text.length > 20 && i.details && msg.text.includes(i.details.slice(0, 25)))
+              );
+              const msgReminder = messageReminders.find((r) => r.messageId === msg.id);
+              const tagDeadline = matchingItem
+                ? formatItemTagDeadline(matchingItem.startTime || matchingItem.deadline, matchingItem.type === 'meeting')
+                : '';
 
               return (
                 <div
                   key={msg.id}
-                  className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-indigo-200 dark:hover:border-indigo-800 transition-all space-y-2.5"
+                  id={`msg-${msg.id}`}
+                  className={`group relative p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border transition-all space-y-2.5 ${
+                    highlightedMessageId === msg.id
+                      ? 'border-indigo-500 ring-2 ring-indigo-500/40 bg-indigo-50/20 dark:bg-indigo-950/30 shadow-md'
+                      : 'border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-indigo-200 dark:hover:border-indigo-800'
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2.5">
@@ -323,7 +358,7 @@ export const ChatsPage: React.FC = () => {
                               New
                             </span>
                           )}
-                          {isExtracted && (
+                          {matchingItem && (
                             <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5">
                               <CheckCircle className="w-3 h-3" /> Extracted
                             </span>
@@ -338,18 +373,152 @@ export const ChatsPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => deleteMessage(msg.id)}
-                      aria-label="Delete message"
-                      className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {/* Action buttons: Copy, Remind me, Delete */}
+                    <div className="flex items-center gap-1">
+                      {/* Copy button */}
+                      <button
+                        type="button"
+                        onClick={() => handleCopyMessage(msg)}
+                        className="px-2 py-1 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer min-h-[32px]"
+                        title="Copy message"
+                        aria-label="Copy message"
+                      >
+                        {copiedMsgId === msg.id ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span className="text-[11px]">Copy</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Small bell icon / "Remind me" option next to Copy on hover / touch */}
+                      <button
+                        type="button"
+                        onClick={() => openReminderModalForMessage(msg, matchingItem)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer min-h-[32px] ${
+                          msgReminder
+                            ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-semibold border border-amber-300 dark:border-amber-800'
+                            : 'text-slate-500 hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/60'
+                        }`}
+                        title={msgReminder ? 'Edit reminder' : 'Remind me about this message'}
+                        aria-label="Remind me"
+                      >
+                        <Bell className={`w-3.5 h-3.5 ${msgReminder ? 'fill-amber-500 text-amber-600' : 'text-slate-400 group-hover:text-amber-500'}`} />
+                        <span className="text-[11px]">{msgReminder ? 'Reminder Set' : 'Remind me'}</span>
+                      </button>
+
+                      {/* Delete message button */}
+                      <button
+                        type="button"
+                        onClick={() => deleteMessage(msg.id)}
+                        aria-label="Delete message"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
+                        title="Delete message"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Bell badge on messages that have a reminder */}
+                  {msgReminder && (
+                    <div className="pl-10">
+                      <button
+                        type="button"
+                        onClick={() => openReminderModalForMessage(msg, matchingItem)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border shadow-xs transition-colors cursor-pointer ${
+                          msgReminder.status === 'done'
+                            ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                            : msgReminder.status === 'triggered'
+                            ? 'bg-rose-50 dark:bg-rose-950/80 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
+                            : 'bg-amber-50 dark:bg-amber-950/80 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/60'
+                        }`}
+                        title="Click to manage or snooze reminder"
+                      >
+                        <Bell className={`w-3.5 h-3.5 ${msgReminder.status === 'done' ? 'text-slate-400' : 'fill-amber-500 text-amber-600'}`} />
+                        <span>
+                          Reminder: {new Date(msgReminder.remindAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                          {msgReminder.note ? ` · ${msgReminder.note}` : ''}
+                        </span>
+                        {msgReminder.status === 'done' && (
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold ml-1 bg-emerald-100 dark:bg-emerald-950 px-1.5 py-0.2 rounded-full">
+                            Done
+                          </span>
+                        )}
+                        {msgReminder.status === 'triggered' && (
+                          <span className="text-[10px] text-rose-600 dark:text-rose-400 font-bold ml-1 bg-rose-100 dark:bg-rose-950 px-1.5 py-0.2 rounded-full animate-pulse">
+                            Due
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  )}
 
                   <p className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed pl-10 whitespace-pre-wrap">
                     {msg.text}
                   </p>
+
+                  {/* Coloured tag for detected items with one-tap "Remind me" & "Add to calendar" */}
+                  {matchingItem && (
+                    <div className="pl-10 pt-1">
+                      <div
+                        className={`p-3 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all ${
+                          matchingItem.type === 'assignment'
+                            ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300/80 dark:border-emerald-800/80 text-emerald-900 dark:text-emerald-200'
+                            : matchingItem.type === 'date'
+                            ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-300/80 dark:border-indigo-800/80 text-indigo-900 dark:text-indigo-200'
+                            : matchingItem.type === 'meeting'
+                            ? 'bg-violet-50/80 dark:bg-violet-950/40 border-violet-300/80 dark:border-violet-800/80 text-violet-900 dark:text-violet-200'
+                            : 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-300/80 dark:border-amber-800/80 text-amber-900 dark:text-amber-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg shrink-0 ${
+                              matchingItem.type === 'assignment'
+                                ? 'bg-emerald-200 dark:bg-emerald-900/90 text-emerald-900 dark:text-emerald-100'
+                                : matchingItem.type === 'date'
+                                ? 'bg-indigo-200 dark:bg-indigo-900/90 text-indigo-900 dark:text-indigo-100'
+                                : matchingItem.type === 'meeting'
+                                ? 'bg-violet-200 dark:bg-violet-900/90 text-violet-900 dark:text-violet-100'
+                                : 'bg-amber-200 dark:bg-amber-900/90 text-amber-900 dark:text-amber-100'
+                            }`}
+                          >
+                            {matchingItem.type === 'assignment'
+                              ? `Assignment${tagDeadline ? `, ${tagDeadline}` : ''}`
+                              : matchingItem.type === 'date'
+                              ? `Important Date${tagDeadline ? `, ${tagDeadline}` : ''}`
+                              : matchingItem.type === 'meeting'
+                              ? `Meeting${tagDeadline ? `, ${tagDeadline}` : ''}`
+                              : `Notice${tagDeadline ? `, ${tagDeadline}` : ''}`}
+                          </span>
+                          <span className="text-xs font-semibold truncate text-slate-800 dark:text-slate-100">
+                            {matchingItem.title}
+                          </span>
+                        </div>
+
+                        {/* One-tap action buttons so user can act without leaving the chat */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => openReminderModalForMessage(msg, matchingItem)}
+                            className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-xs cursor-pointer min-h-[32px] transition-colors"
+                            title="Set reminder for this detected item"
+                          >
+                            <Bell className="w-3.5 h-3.5 text-amber-500" />
+                            <span>Remind me</span>
+                          </button>
+
+                          <CalendarButton item={matchingItem} size="sm" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-1.5 pl-10 flex-wrap">
                     <button

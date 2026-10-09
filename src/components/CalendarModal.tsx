@@ -93,21 +93,21 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
       aria-modal="true"
       aria-labelledby="calendar-modal-title"
     >
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 sm:p-7 border border-slate-200 dark:border-slate-800 shadow-2xl relative my-auto">
+      <div className="bg-white dark:bg-[#1D2112] rounded-3xl max-w-lg w-full p-6 sm:p-7 border border-[#E3E6D3] dark:border-[#2B321A] shadow-2xl relative my-auto">
         {/* Header */}
-        <div className="flex items-start justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-start justify-between pb-4 border-b border-[#E3E6D3] dark:border-[#2B321A]">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-[#EEF1DC] dark:bg-[#283017] border border-[#DDE3BE] dark:border-[#384221] text-[#6B7A2A] dark:text-[#9AAE3C] flex items-center justify-center shrink-0">
               <Calendar className="w-5 h-5" />
             </div>
             <div>
               <h2
                 id="calendar-modal-title"
-                className="text-lg font-bold text-slate-900 dark:text-white"
+                className="text-lg font-bold text-[#2B2F1E] dark:text-[#EEF1DC]"
               >
                 Add to Calendar
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-[#6B7059] dark:text-[#A4AA8E]">
                 Sync with Apple Calendar, Google Calendar, or Outlook
               </p>
             </div>
@@ -116,50 +116,50 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
           <button
             onClick={onClose}
             aria-label="Close calendar options"
-            className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer transition-colors"
+            className="p-2 text-[#6B7059] hover:text-[#2B2F1E] dark:hover:text-[#EEF1DC] rounded-xl min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Event Preview Card */}
-        <div className="my-5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-2">
+        <div className="my-5 p-4 rounded-2xl bg-[#F7F8F2] dark:bg-[#14170D] border border-[#E3E6D3] dark:border-[#2B321A] space-y-2">
           <div className="flex items-center gap-2 flex-wrap text-xs font-semibold">
-            <span className="text-indigo-600 dark:text-indigo-400 font-bold">
+            <span className="text-[#6B7A2A] dark:text-[#9AAE3C] font-bold">
               {chatName}
             </span>
-            <span className="text-slate-400">·</span>
-            <span className="capitalize text-slate-600 dark:text-slate-300">
+            <span className="text-[#6B7059]">·</span>
+            <span className="capitalize text-[#6B7059] dark:text-[#A4AA8E]">
               {item.type}
             </span>
             {isSynced && (
-              <span className="ml-auto inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+              <span className="ml-auto inline-flex items-center gap-1 text-[11px] font-bold text-[#6B7A2A] dark:text-[#9AAE3C] bg-[#EEF1DC] dark:bg-[#283017] px-2 py-0.5 rounded-full border border-[#DDE3BE] dark:border-[#384221]">
                 <CheckCircle2 className="w-3 h-3" /> Synced
               </span>
             )}
           </div>
 
-          <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug">
+          <h3 className="text-base font-bold text-[#2B2F1E] dark:text-[#EEF1DC] leading-snug">
             {item.title}
           </h3>
 
-          <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-300 flex-wrap pt-1">
+          <div className="flex items-center gap-3 text-xs text-[#6B7059] dark:text-[#A4AA8E] flex-wrap pt-1">
             <div className="flex items-center gap-1.5 font-medium">
-              <Clock className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+              <Clock className="w-3.5 h-3.5 text-[#6B7A2A] shrink-0" />
               <span>
                 {dateFormatted} · {timeFormatted}
               </span>
             </div>
 
             {item.location && (
-              <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
-                <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+              <div className="flex items-center gap-1 text-[#6B7059] dark:text-[#A4AA8E]">
+                <MapPin className="w-3.5 h-3.5 text-[#C0392B] shrink-0" />
                 <span>{item.location}</span>
               </div>
             )}
 
             {item.meetingLink && (
-              <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+              <div className="flex items-center gap-1 text-[#6B7A2A] dark:text-[#9AAE3C]">
                 <Video className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate max-w-[200px]">Online Meeting</span>
               </div>
@@ -168,10 +168,10 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
         </div>
 
         {/* Alarm Toggle Card */}
-        <div className="mb-5 p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/60">
+        <div className="mb-5 p-4 rounded-2xl bg-[#FEFCE8] dark:bg-[#28220A] border border-[#FEF08A] dark:border-[#854D0E]">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-start gap-2.5">
-              <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 shrink-0 mt-0.5">
+              <div className="p-2 rounded-xl bg-[#FEF08A] dark:bg-[#713F12] text-[#854D0E] dark:text-[#FEF08A] shrink-0 mt-0.5">
                 {isAlarmOn ? (
                   <Bell className="w-4 h-4" />
                 ) : (
@@ -179,10 +179,10 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
                 )}
               </div>
               <div>
-                <span className="text-sm font-bold text-slate-900 dark:text-white block">
+                <span className="text-sm font-bold text-[#713F12] dark:text-[#FEF08A] block">
                   Ring an alarm
                 </span>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                <p className="text-xs text-[#854D0E] dark:text-[#CA8A04] mt-0.5">
                   Your phone's calendar will ring at the reminder times.
                 </p>
               </div>
@@ -193,8 +193,8 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
               role="switch"
               aria-checked={isAlarmOn}
               onClick={() => toggleItemAlarm(item.id)}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 ${
-                isAlarmOn ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#6B7A2A] focus:ring-offset-2 ${
+                isAlarmOn ? 'bg-[#6B7A2A]' : 'bg-[#E3E6D3] dark:bg-[#2B321A]'
               }`}
             >
               <span
@@ -205,7 +205,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
             </button>
           </div>
 
-          <div className="mt-3 pt-3 border-t border-amber-200/60 dark:border-amber-900/40 flex items-center justify-between text-[11px] text-amber-800 dark:text-amber-300">
+          <div className="mt-3 pt-3 border-t border-[#FEF08A]/60 dark:border-[#854D0E]/60 flex items-center justify-between text-[11px] text-[#854D0E] dark:text-[#FEF08A]">
             <span>Built-in triggers: 1 day, 1 hour, and 10 mins before</span>
             <span className="font-semibold">{isAlarmOn ? 'Enabled' : 'Disabled'}</span>
           </div>
@@ -216,7 +216,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
           {/* Download .ics Button */}
           <button
             onClick={handleDownloadICS}
-            className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer min-h-[46px]"
+            className="w-full py-3 px-4 rounded-xl bg-[#6B7A2A] hover:bg-[#5A6823] active:bg-[#4A561C] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer min-h-[46px]"
           >
             <Download className="w-4 h-4" />
             <span>Download .ics (Apple Calendar / Outlook / Phone)</span>
@@ -225,9 +225,9 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
           {/* Add to Google Calendar Button */}
           <button
             onClick={handleOpenGoogleCalendar}
-            className="w-full py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer min-h-[46px]"
+            className="w-full py-3 px-4 rounded-xl border border-[#E3E6D3] dark:border-[#2B321A] hover:bg-[#EEF1DC] dark:hover:bg-[#283017] text-[#2B2F1E] dark:text-[#EEF1DC] font-semibold text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer min-h-[46px]"
           >
-            <ExternalLink className="w-4 h-4 text-indigo-500" />
+            <ExternalLink className="w-4 h-4 text-[#6B7A2A]" />
             <span>Add to Google Calendar (Browser)</span>
           </button>
 
@@ -236,18 +236,18 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
             onClick={() => toggleItemCalendarSync(item.id)}
             className={`w-full py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer min-h-[40px] ${
               isSynced
-                ? 'border-emerald-300 dark:border-emerald-800/80 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
-                : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                ? 'border-[#6B7A2A] bg-[#EEF1DC] dark:bg-[#283017] text-[#3F4A16] dark:text-[#EEF1DC]'
+                : 'border-[#E3E6D3] dark:border-[#2B321A] text-[#6B7059] dark:text-[#A4AA8E] hover:bg-[#EEF1DC] dark:hover:bg-[#283017]'
             }`}
           >
             {isSynced ? (
               <>
-                <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <Check className="w-3.5 h-3.5 text-[#6B7A2A] dark:text-[#9AAE3C]" />
                 <span>Marked as Synced (Event ID: {item.calendarEventId || 'cal-synced'})</span>
               </>
             ) : (
               <>
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                <Calendar className="w-3.5 h-3.5 text-[#6B7059]" />
                 <span>Mark as Synced in Calendar</span>
               </>
             )}
@@ -255,40 +255,40 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
         </div>
 
         {/* Mobile Loud Notification Help Accordion */}
-        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="mt-4 pt-4 border-t border-[#E3E6D3] dark:border-[#2B321A]">
           <button
             type="button"
             onClick={() => setShowPhoneHelp(!showPhoneHelp)}
-            className="w-full flex items-center justify-between text-left text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer py-1"
+            className="w-full flex items-center justify-between text-left text-xs font-semibold text-[#6B7059] dark:text-[#A4AA8E] hover:text-[#2B2F1E] dark:hover:text-[#EEF1DC] transition-colors cursor-pointer py-1"
           >
             <span className="flex items-center gap-1.5">
-              <Smartphone className="w-4 h-4 text-indigo-500" />
+              <Smartphone className="w-4 h-4 text-[#6B7A2A]" />
               <span>How to make calendar alarms ring loudly on your phone</span>
             </span>
             {showPhoneHelp ? (
-              <ChevronUp className="w-4 h-4 text-slate-400" />
+              <ChevronUp className="w-4 h-4 text-[#6B7059]" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
+              <ChevronDown className="w-4 h-4 text-[#6B7059]" />
             )}
           </button>
 
           {showPhoneHelp && (
-            <div className="mt-2.5 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 text-xs text-slate-600 dark:text-slate-300 space-y-2.5 animate-in fade-in">
+            <div className="mt-2.5 p-3.5 rounded-2xl bg-[#F7F8F2] dark:bg-[#14170D] text-xs text-[#6B7059] dark:text-[#A4AA8E] space-y-2.5 animate-in fade-in">
               <div>
-                <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1">
+                <p className="font-bold text-[#2B2F1E] dark:text-[#EEF1DC] flex items-center gap-1">
                   📱 iPhone (iOS):
                 </p>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
+                <p className="mt-0.5 text-[11px] leading-relaxed text-[#6B7059] dark:text-[#A4AA8E]">
                   Open <strong>Settings &gt; Notifications &gt; Calendar</strong>.
                   Turn on <strong>Allow Notifications</strong>, set Alert Style to <strong>Banners or Alerts</strong>, and tap <strong>Sounds</strong> to select a loud ringtone. Make sure your phone's physical Silent switch is off or Ring volume is up.
                 </p>
               </div>
 
-              <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60">
-                <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1">
+              <div className="pt-2 border-t border-[#E3E6D3] dark:border-[#2B321A]">
+                <p className="font-bold text-[#2B2F1E] dark:text-[#EEF1DC] flex items-center gap-1">
                   🤖 Android:
                 </p>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
+                <p className="mt-0.5 text-[11px] leading-relaxed text-[#6B7059] dark:text-[#A4AA8E]">
                   Open <strong>Settings &gt; Apps &gt; Calendar &gt; Notifications</strong>.
                   Ensure notifications are set to <strong>Alerting</strong> (not Silent). Tap <strong>Event Reminders &gt; Sound</strong> and choose a loud alarm sound. Also verify Battery Saver doesn't restrict Calendar.
                 </p>

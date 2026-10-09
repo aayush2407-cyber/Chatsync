@@ -32,12 +32,12 @@ export const CalendarButton: React.FC<CalendarButtonProps> = ({
 
   const variantClass =
     variant === 'primary'
-      ? 'bg-indigo-600 hover:bg-indigo-700 text-white font-semibold'
+      ? 'bg-[#6B7A2A] hover:bg-[#5A6823] active:bg-[#4A561C] text-white font-semibold'
       : variant === 'ghost'
-      ? 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+      ? 'text-[#6B7059] dark:text-[#A4AA8E] hover:bg-[#EEF1DC] dark:hover:bg-[#283017]'
       : isSynced
-      ? 'border border-emerald-300 dark:border-emerald-800/80 bg-emerald-50/80 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-medium'
-      : 'border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800';
+      ? 'border border-[#6B7A2A] bg-[#EEF1DC] dark:bg-[#283017] text-[#3F4A16] dark:text-[#EEF1DC] font-medium'
+      : 'border border-[#E3E6D3] dark:border-[#2B321A] text-[#2B2F1E] dark:text-[#EEF1DC] hover:bg-[#EEF1DC] dark:hover:bg-[#283017]';
 
   return (
     <>
@@ -48,12 +48,12 @@ export const CalendarButton: React.FC<CalendarButtonProps> = ({
         className={`rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer min-h-[36px] font-medium shrink-0 ${basePadding} ${variantClass} ${className}`}
         title={isSynced ? 'Synced to calendar — click to view options' : 'Add to Calendar'}
       >
-        <Calendar className={`w-3.5 h-3.5 ${isSynced ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-500'}`} />
+        <Calendar className={`w-3.5 h-3.5 ${isSynced ? 'text-[#6B7A2A] dark:text-[#9AAE3C]' : 'text-[#6B7A2A]'}`} />
         {showLabel && (
           <span>{isSynced ? 'Synced' : 'Add to Calendar'}</span>
         )}
         {isSynced && (
-          <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400 stroke-[3]" />
+          <Check className="w-3 h-3 text-[#6B7A2A] dark:text-[#9AAE3C] stroke-[3]" />
         )}
       </button>
 

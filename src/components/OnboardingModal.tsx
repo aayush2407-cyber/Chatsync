@@ -41,17 +41,17 @@ export const OnboardingModal: React.FC = () => {
       description:
         'Upload your WhatsApp or Telegram export files (.txt / .zip) or connect Discord and Slack channels. Only the specific chats you import are ever accessed.',
       icon: Link2,
-      color: 'indigo',
+      color: 'olive',
       visual: (
         <div className="flex flex-wrap items-center justify-center gap-2.5 py-4">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold">
-            <MessageSquare className="w-3.5 h-3.5" /> WhatsApp (.txt / .zip)
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#EEF1DC] dark:bg-[#283017] text-[#3F4A16] dark:text-[#EEF1DC] border border-[#DDE3BE] dark:border-[#384221] text-xs font-semibold">
+            <MessageSquare className="w-3.5 h-3.5 text-[#6B7A2A]" /> WhatsApp (.txt / .zip)
           </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 text-xs font-semibold">
-            <MessageSquare className="w-3.5 h-3.5" /> Telegram (.json)
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#EEF1DC] dark:bg-[#283017] text-[#3F4A16] dark:text-[#EEF1DC] border border-[#DDE3BE] dark:border-[#384221] text-xs font-semibold">
+            <MessageSquare className="w-3.5 h-3.5 text-[#7E9130]" /> Telegram (.json)
           </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-semibold">
-            <MessageSquare className="w-3.5 h-3.5" /> Discord & Slack
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#EEF1DC] dark:bg-[#283017] text-[#3F4A16] dark:text-[#EEF1DC] border border-[#DDE3BE] dark:border-[#384221] text-xs font-semibold">
+            <MessageSquare className="w-3.5 h-3.5 text-[#5A6823]" /> Discord & Slack
           </span>
         </div>
       ),
@@ -65,20 +65,20 @@ export const OnboardingModal: React.FC = () => {
       description:
         'College groups can have hundreds of memes, greetings, and random banter. SyncPulse sends messages to Gemini only to extract deadlines, exams, homework, and circulars.',
       icon: Sparkles,
-      color: 'violet',
+      color: 'olive',
       visual: (
         <div className="w-full max-w-xs mx-auto py-2 space-y-2">
-          <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-[11px] text-slate-500 line-through truncate flex items-center justify-between">
+          <div className="p-2.5 rounded-xl bg-[#F7F8F2] dark:bg-[#14170D] text-[11px] text-[#6B7059] line-through truncate flex items-center justify-between border border-[#E3E6D3] dark:border-[#2B321A]">
             <span>"Who has the textbook pdf?"</span>
-            <span className="text-[10px] text-slate-400 no-underline">Ignored (casual)</span>
+            <span className="text-[10px] text-[#6B7059] no-underline">Ignored (casual)</span>
           </div>
-          <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-[11px] text-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800/60 flex items-center justify-between font-medium">
+          <div className="p-2.5 rounded-xl bg-[#EEF1DC] dark:bg-[#283017] text-[11px] text-[#3F4A16] dark:text-[#EEF1DC] border border-[#DDE3BE] dark:border-[#384221] flex items-center justify-between font-medium">
             <span>"Midterm moved to Thursday 2PM"</span>
-            <span className="text-[10px] bg-indigo-600 text-white px-2 py-0.5 rounded-md font-bold">Important Date</span>
+            <span className="text-[10px] bg-[#6B7A2A] text-white px-2 py-0.5 rounded-md font-bold">Important Date</span>
           </div>
-          <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-[11px] text-emerald-900 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between font-medium">
+          <div className="p-2.5 rounded-xl bg-[#EEF1DC] dark:bg-[#283017] text-[11px] text-[#3F4A16] dark:text-[#EEF1DC] border border-[#DDE3BE] dark:border-[#384221] flex items-center justify-between font-medium">
             <span>"Submit Lab Report 4 before Friday"</span>
-            <span className="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded-md font-bold">Assignment</span>
+            <span className="text-[10px] bg-[#5A6823] text-white px-2 py-0.5 rounded-md font-bold">Assignment</span>
           </div>
         </div>
       ),
@@ -92,24 +92,24 @@ export const OnboardingModal: React.FC = () => {
       description:
         'Your extracted homework, lab tests, and dates are organized into prioritized lists with color-coded badges, customizable reminders, and morning study briefings.',
       icon: CalendarCheck2,
-      color: 'emerald',
+      color: 'olive',
       visual: (
         <div className="flex flex-col gap-2 py-3 max-w-xs mx-auto">
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs">
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-[#1D2112] border border-[#E3E6D3] dark:border-[#2B321A] shadow-xs">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-rose-500" />
-              <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">CS 201 Problem Set</span>
+              <span className="w-2 h-2 rounded-full bg-[#C0392B]" />
+              <span className="text-xs font-semibold text-[#2B2F1E] dark:text-[#EEF1DC]">CS 201 Problem Set</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FEF2F2] dark:bg-[#2A1215] text-[#C0392B]">
               Due in 4h
             </span>
           </div>
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs">
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-[#1D2112] border border-[#E3E6D3] dark:border-[#2B321A] shadow-xs">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
-              <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">Math Quiz #2</span>
+              <span className="w-2 h-2 rounded-full bg-[#D98324]" />
+              <span className="text-xs font-semibold text-[#2B2F1E] dark:text-[#EEF1DC]">Math Quiz #2</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FEFCE8] dark:bg-[#28220A] text-[#D98324]">
               Tomorrow
             </span>
           </div>
@@ -144,9 +144,9 @@ export const OnboardingModal: React.FC = () => {
       aria-labelledby="onboarding-title"
       className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
     >
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-2xl overflow-hidden my-auto">
+      <div className="relative w-full max-w-lg bg-white dark:bg-[#1D2112] rounded-3xl border border-[#E3E6D3] dark:border-[#2B321A] shadow-2xl overflow-hidden my-auto">
         {/* Top bar with progress and Skip */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E3E6D3] dark:border-[#2B321A]">
           <div className="flex items-center gap-2">
             <div className="flex gap-1.5" aria-label={`Step ${currentStep + 1} of 3`}>
               {screens.map((s, idx) => (
@@ -156,14 +156,14 @@ export const OnboardingModal: React.FC = () => {
                   onClick={() => setCurrentStep(idx)}
                   className={`h-2 rounded-full transition-all cursor-pointer ${
                     idx === currentStep
-                      ? 'w-7 bg-indigo-600 dark:bg-indigo-500'
-                      : 'w-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300'
+                      ? 'w-7 bg-[#6B7A2A] dark:bg-[#9AAE3C]'
+                      : 'w-2 bg-[#E3E6D3] dark:bg-[#2B321A] hover:bg-[#DDE3BE]'
                   }`}
                   aria-label={`Go to step ${idx + 1}`}
                 />
               ))}
             </div>
-            <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 ml-1">
+            <span className="text-[11px] font-semibold text-[#6B7059] dark:text-[#A4AA8E] ml-1">
               {current.badge}
             </span>
           </div>
@@ -171,7 +171,7 @@ export const OnboardingModal: React.FC = () => {
           <button
             type="button"
             onClick={completeOnboarding}
-            className="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer min-h-[36px] flex items-center gap-1"
+            className="text-xs font-semibold text-[#6B7059] dark:text-[#A4AA8E] hover:text-[#2B2F1E] dark:hover:text-[#EEF1DC] px-2 py-1 rounded-lg hover:bg-[#EEF1DC] dark:hover:bg-[#283017] transition-colors cursor-pointer min-h-[36px] flex items-center gap-1"
             aria-label="Skip onboarding"
           >
             <span>Skip</span>
@@ -192,43 +192,35 @@ export const OnboardingModal: React.FC = () => {
             >
               {/* Header Icon + Titles */}
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                <div
-                  className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
-                    current.color === 'indigo'
-                      ? 'bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/50'
-                      : current.color === 'violet'
-                      ? 'bg-violet-50 dark:bg-violet-950/80 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-900/50'
-                      : 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50'
-                  }`}
-                >
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-xs bg-[#EEF1DC] dark:bg-[#283017] text-[#6B7A2A] dark:text-[#9AAE3C] border border-[#DDE3BE] dark:border-[#384221]">
                   <Icon className="w-7 h-7" />
                 </div>
                 <div>
                   <h2
                     id="onboarding-title"
-                    className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white"
+                    className="text-xl sm:text-2xl font-bold text-[#2B2F1E] dark:text-[#EEF1DC]"
                   >
                     {current.title}
                   </h2>
-                  <p className="text-xs sm:text-sm font-medium text-indigo-600 dark:text-indigo-400 mt-0.5">
+                  <p className="text-xs sm:text-sm font-medium text-[#6B7A2A] dark:text-[#9AAE3C] mt-0.5">
                     {current.tagline}
                   </p>
                 </div>
               </div>
 
               {/* Graphic / Visual Demonstration */}
-              <div className="bg-slate-50 dark:bg-slate-950/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/80 my-3">
+              <div className="bg-[#F7F8F2] dark:bg-[#14170D] rounded-2xl p-4 border border-[#E3E6D3] dark:border-[#2B321A] my-3">
                 {current.visual}
               </div>
 
               {/* Description */}
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              <p className="text-xs sm:text-sm text-[#6B7059] dark:text-[#A4AA8E] leading-relaxed">
                 {current.description}
               </p>
 
               {/* Privacy highlight footer note */}
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-100/70 dark:bg-slate-800/50 text-[11px] text-slate-500 dark:text-slate-400 text-left">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-[#EEF1DC]/60 dark:bg-[#283017]/60 text-[11px] text-[#3F4A16] dark:text-[#EEF1DC] text-left border border-[#DDE3BE] dark:border-[#384221]">
+                <ShieldCheck className="w-4 h-4 text-[#6B7A2A] dark:text-[#9AAE3C] shrink-0" />
                 <span>{current.tip}</span>
               </div>
             </motion.div>
@@ -236,12 +228,12 @@ export const OnboardingModal: React.FC = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="px-5 sm:px-7 py-4 bg-slate-50/80 dark:bg-slate-900/80 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+        <div className="px-5 sm:px-7 py-4 bg-[#F7F8F2] dark:bg-[#14170D] border-t border-[#E3E6D3] dark:border-[#2B321A] flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={handleBack}
             disabled={currentStep === 0}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors min-h-[44px] flex items-center gap-1.5 cursor-pointer"
+            className="px-4 py-2.5 rounded-xl border border-[#E3E6D3] dark:border-[#2B321A] text-xs sm:text-sm font-semibold text-[#2B2F1E] dark:text-[#EEF1DC] hover:bg-white dark:hover:bg-[#1D2112] disabled:opacity-40 disabled:cursor-not-allowed transition-colors min-h-[44px] flex items-center gap-1.5 cursor-pointer"
             aria-label="Previous step"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -251,7 +243,7 @@ export const OnboardingModal: React.FC = () => {
           <button
             type="button"
             onClick={handleNext}
-            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors min-h-[44px] flex items-center gap-1.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            className="px-5 py-2.5 rounded-xl bg-[#6B7A2A] hover:bg-[#5A6823] active:bg-[#4A561C] text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors min-h-[44px] flex items-center gap-1.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#6B7A2A] focus:ring-offset-2"
             aria-label={currentStep === screens.length - 1 ? 'Get Started with SyncPulse' : 'Next step'}
           >
             <span>{currentStep === screens.length - 1 ? 'Get Started' : 'Next'}</span>

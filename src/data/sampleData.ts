@@ -1,4 +1,4 @@
-import { Chat, Message, ExtractedItem, Summary, StudentProfile, StudentSettings } from '../types';
+import { Chat, Message, ExtractedItem, Summary, StudentProfile, StudentSettings, MessageReminder } from '../types';
 
 export const initialStudent: StudentProfile = {
   name: 'Alex Rivera',
@@ -10,6 +10,9 @@ export const initialStudent: StudentProfile = {
 export const initialSettings: StudentSettings = {
   morningDigest: true,
   digestTime: '08:00',
+  eveningDigest: true,
+  eveningDigestTime: '21:00',
+  smartNudgesEnabled: true,
   urgentAlerts: true,
   quietHoursEnabled: true,
   quietHoursStart: '23:00',
@@ -290,5 +293,34 @@ export const initialSummaries: Summary[] = [
     casualHighlights: [
       'Clarifying whether attendance for the online Zoom lecture is recorded',
     ],
+  },
+];
+
+export const initialReminders: MessageReminder[] = [
+  {
+    id: 'rem-1',
+    messageId: 'msg-1',
+    chatId: 'chat-1',
+    remindAt: new Date(Date.now() + 3600000 * 2).toISOString(), // 2 hours from now
+    note: 'Submit python visualizer code via Gradescope before midnight',
+    status: 'pending',
+    createdAt: '2026-10-09T09:50:00.000Z',
+    title: 'Project 1: Python Data Visualizer',
+    deadline: '2026-10-16T23:59:00.000Z',
+    sourceText: 'Reminder: Project 1 (Python Data Visualizer) deadline is pushed back by 2 days. The new hard deadline is this Friday, Oct 16 at 11:59 PM in Gradescope.',
+    sender: 'TA David Chen',
+  },
+  {
+    id: 'rem-2',
+    messageId: 'msg-2',
+    chatId: 'chat-2',
+    remindAt: new Date(Date.now() + 3600000 * 5).toISOString(), // 5 hours from now
+    note: 'Buy approved calculator and HB pencils from campus bookstore',
+    status: 'pending',
+    createdAt: '2026-10-09T10:20:00.000Z',
+    title: 'Chemistry Midterm 1',
+    deadline: '2026-10-21T14:00:00.000Z',
+    sourceText: 'Prof announced that our Midterm 1 will be held next Wednesday Oct 21 at 2:00 PM in Science Hall 301. Bring an HB pencil and approved calculator!',
+    sender: 'Maya (Lab Partner)',
   },
 ];

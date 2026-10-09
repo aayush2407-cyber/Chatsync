@@ -1,14 +1,83 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-olive-50: #f7f8f2;
+  --color-olive-100: #eef1dc;
+  --color-olive-200: #dde3be;
+  --color-olive-300: #c2cc8f;
+  --color-olive-400: #9aae3c;
+  --color-olive-500: #7e9130;
+  --color-olive-600: #6b7a2a;
+  --color-olive-700: #5a6823;
+  --color-olive-800: #4a561c;
+  --color-olive-900: #3f4a16;
+  --color-olive-950: #1d2112;
+  --color-olive-darkpage: #14170d;
+}
+
+:root {
+  --bg-page: #f7f8f2;
+  --bg-surface: #ffffff;
+  --border-olive: #e3e6d3;
+  --primary-olive: #6b7a2a;
+  --primary-hover: #5a6823;
+  --primary-pressed: #4a561c;
+  --primary-light: #eef1dc;
+  --primary-tint: #dde3be;
+  --dark-olive: #3f4a16;
+  --text-body: #2b2f1e;
+  --text-muted: #6b7059;
+  --status-overdue: #c0392b;
+  --status-urgent: #d98324;
+  --status-upcoming: #c9a227;
+  --status-done: #6b7a2a;
+}
+
+.dark {
+  --bg-page: #14170d;
+  --bg-surface: #1d2112;
+  --border-olive: #2b321a;
+  --primary-olive: #9aae3c;
+  --primary-hover: #a8bc47;
+  --primary-pressed: #889c31;
+  --primary-light: #283017;
+  --primary-tint: #384221;
+  --dark-olive: #eef1dc;
+  --text-body: #eef1dc;
+  --text-muted: #a4aa8e;
+  --status-overdue: #e74c3c;
+  --status-urgent: #f39c12;
+  --status-upcoming: #f1c40f;
+  --status-done: #9aae3c;
+}
+
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-color: var(--bg-page);
+    color: var(--text-body);
   }
+}
+
+/* Custom card shadow with olive border */
+.card-olive {
+  background-color: #ffffff;
+  border: 1px solid #e3e6d3;
+  box-shadow: 0 1px 3px 0 rgba(43, 47, 30, 0.05), 0 1px 2px -1px rgba(43, 47, 30, 0.05);
+}
+
+.dark .card-olive {
+  background-color: #1d2112;
+  border-color: #2b321a;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
 }
 
 /* Safe area padding for mobile bottom bar */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
