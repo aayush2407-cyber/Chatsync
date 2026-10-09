@@ -1,0 +1,6 @@
+{
+  "name": "SyncPulse",
+  "description": "AI Chat Hub: turn class chats into a clear to-do list for college students.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

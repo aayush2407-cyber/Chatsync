@@ -1,0 +1,44 @@
+{
+  "id": "/",
+  "name": "SyncPulse — AI Chat Hub",
+  "short_name": "SyncPulse",
+  "description": "AI Chat Hub: turn class chats into a clear to-do list for college students.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#4f46e5",
+  "background_color": "#ffffff",
+  "share_target": {
+    "action": "/?shared=true",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "chat_export",
+          "accept": [
+            "text/plain",
+            ".txt",
+            ".zip",
+            "application/zip",
+            "application/x-zip-compressed",
+            "application/json",
+            ".json"
+          ]
+        }
+      ]
+    }
+  },
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
