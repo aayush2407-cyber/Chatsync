@@ -10,12 +10,15 @@ import {
   X,
   MessageSquare,
   Sparkles,
+  Calendar,
 } from 'lucide-react';
 import { useSyncPulse } from '../context/SyncPulseContext';
 import { ExtractedItem, ItemPriority } from '../types';
 import { EmptyState } from '../components/EmptyState';
 import { DeadlineBadge } from '../components/DeadlineBadge';
 import { ReminderSelector } from '../components/ReminderSelector';
+import { CalendarButton } from '../components/CalendarButton';
+import { ItemRowSkeleton } from '../components/SkeletonLoader';
 
 export const AssignmentsPage: React.FC = () => {
   const {
@@ -26,6 +29,8 @@ export const AssignmentsPage: React.FC = () => {
     deleteItem,
     setItemReminder,
     requestNotificationPermission,
+    exportAllUpcomingCalendar,
+    isScanning,
   } = useSyncPulse();
 
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
@@ -103,13 +108,27 @@ export const AssignmentsPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-xs transition-colors cursor-pointer min-h-[44px]"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Task</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {assignmentItems.filter((a) => !a.done && a.deadline).length > 0 && (
+            <button
+              onClick={exportAllUpcomingCalendar}
+              className="px-3.5 py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800/80 bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer min-h-[44px]"
+              aria-label="Add all upcoming deadlines to calendar (.ics)"
+              title="Export all unfinished upcoming items to calendar with alarms"
+            >
+              <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>Add all upcoming to calendar</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-xs transition-colors cursor-pointer min-h-[44px]"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Task</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter bar */}
@@ -162,7 +181,13 @@ export const AssignmentsPage: React.FC = () => {
       </div>
 
       {/* Assignments List or Empty State */}
-      {items.filter((i) => i.type === 'assignment').length === 0 ? (
+      {isScanning ? (
+        <div className="space-y-3.5">
+          <ItemRowSkeleton />
+          <ItemRowSkeleton />
+          <ItemRowSkeleton />
+        </div>
+      ) : items.filter((i) => i.type === 'assignment').length === 0 ? (
         <EmptyState
           icon={CheckCircle2}
           text="You're all caught up! No assignments on your to-do list."
@@ -240,6 +265,17 @@ export const AssignmentsPage: React.FC = () => {
                       >
                         {item.priority} priority
                       </span>
+
+                      {/* Synced with Calendar Badge */}
+                      {item.isCalendarSynced && (
+                        <span
+                          className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1"
+                          title="Synced to calendar"
+                        >
+                          <Calendar className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                          <span>Synced</span>
+                        </span>
+                      )}
                     </div>
 
                     <h3
@@ -276,6 +312,8 @@ export const AssignmentsPage: React.FC = () => {
                       disabled={item.done}
                     />
                   )}
+
+                  <CalendarButton item={item} />
 
                   <button
                     onClick={() => deleteItem(item.id)}

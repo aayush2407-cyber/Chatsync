@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   RefreshCw,
+  ShieldCheck,
 } from 'lucide-react';
 import { useSyncPulse } from '../context/SyncPulseContext';
 import { NavTab } from '../types';
@@ -50,6 +51,7 @@ export const Navigation: React.FC = () => {
     { id: 'assignments', label: 'Assignments', icon: CheckSquare, badgeCount: pendingAssignments > 0 ? pendingAssignments : undefined },
     { id: 'notices', label: 'Notices', icon: Bell, badgeCount: activeNotices > 0 ? activeNotices : undefined },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
+    { id: 'privacy', label: 'Privacy', icon: ShieldCheck },
   ];
 
   return (
@@ -302,7 +304,7 @@ export const Navigation: React.FC = () => {
           <button
             onClick={() => setMobileMenuOpen(true)}
             className={`flex flex-col items-center justify-center h-full min-h-[44px] transition-colors cursor-pointer relative ${
-              activeTab === 'connect' || activeTab === 'notices' || activeTab === 'settings'
+              activeTab === 'connect' || activeTab === 'notices' || activeTab === 'settings' || activeTab === 'privacy'
                 ? 'text-indigo-600 dark:text-indigo-400 font-semibold'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
             }`}

@@ -12,11 +12,16 @@ import {
   AlertTriangle,
   Circle,
   Clock,
+  Video,
+  RotateCw,
+  ExternalLink,
 } from 'lucide-react';
 import { useSyncPulse } from '../context/SyncPulseContext';
 import { EmptyState } from '../components/EmptyState';
 import { DeadlineBadge } from '../components/DeadlineBadge';
 import { ReminderSelector } from '../components/ReminderSelector';
+import { CalendarButton } from '../components/CalendarButton';
+import { ItemRowSkeleton } from '../components/SkeletonLoader';
 import { needsAttentionToday, isDueThisWeek } from '../utils/deadlines';
 
 export const DashboardPage: React.FC = () => {
@@ -36,6 +41,7 @@ export const DashboardPage: React.FC = () => {
     hasDemoData,
     setItemReminder,
     requestNotificationPermission,
+    exportAllUpcomingCalendar,
   } = useSyncPulse();
 
   const assignments = items.filter((i) => i.type === 'assignment');
@@ -300,16 +306,34 @@ export const DashboardPage: React.FC = () => {
                 The 5 nearest unfinished deadlines across all your classes
               </p>
             </div>
-            <button
-              onClick={() => setActiveTab('assignments')}
-              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer min-h-[36px]"
-            >
-              <span>View all</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={exportAllUpcomingCalendar}
+                className="px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800/80 bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer min-h-[36px]"
+                title="Export all unfinished upcoming items to calendar (.ics)"
+              >
+                <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span className="hidden sm:inline">Add all to calendar</span>
+                <span className="sm:hidden">Calendar</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('assignments')}
+                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer min-h-[36px]"
+              >
+                <span>View all</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
-          {nextUpItems.length === 0 ? (
+          {isScanning ? (
+            <div className="space-y-3">
+              <ItemRowSkeleton />
+              <ItemRowSkeleton />
+              <ItemRowSkeleton />
+            </div>
+          ) : nextUpItems.length === 0 ? (
             <div className="text-center py-10 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
               <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
               <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
@@ -351,6 +375,30 @@ export const DashboardPage: React.FC = () => {
                           </span>
                         )}
 
+                        {item.type === 'meeting' && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+                            <Video className="w-3 h-3" />
+                            <span>Meeting</span>
+                          </span>
+                        )}
+
+                        {item.isRescheduled && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/90 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1">
+                            <RotateCw className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                            <span>Rescheduled</span>
+                          </span>
+                        )}
+
+                        {item.isCalendarSynced && (
+                          <span
+                            className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1"
+                            title="Synced to calendar"
+                          >
+                            <Calendar className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                            <span>Synced</span>
+                          </span>
+                        )}
+
                         <span className="text-[11px] text-slate-400 capitalize">
                           · {item.type}
                         </span>
@@ -368,13 +416,29 @@ export const DashboardPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Right Actions: Reminder Selector */}
+                  {/* Right Actions: Join Link + Reminder Selector */}
                   <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                    {item.meetingLink && (
+                      <a
+                        href={item.meetingLink.startsWith('http') ? item.meetingLink : `https://${item.meetingLink}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center gap-1 shadow-xs transition-colors min-h-[36px] cursor-pointer"
+                        aria-label={`Join meeting for ${item.title}`}
+                      >
+                        <Video className="w-3.5 h-3.5" />
+                        <span>Join</span>
+                        <ExternalLink className="w-2.5 h-2.5 opacity-80" />
+                      </a>
+                    )}
+
                     <ReminderSelector
                       currentOffset={item.reminderOffset}
                       onSelectOffset={(offset) => setItemReminder(item.id, offset)}
                       onRequestPermission={requestNotificationPermission}
                     />
+
+                    <CalendarButton item={item} />
 
                     <button
                       onClick={() => setActiveTab(item.type === 'assignment' ? 'assignments' : 'dates')}

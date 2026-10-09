@@ -74,7 +74,46 @@ app.post('/api/summarise-batch', async (req: Request, res: Response) => {
 
     const todayStr = today || new Date().toISOString().split('T')[0];
 
-    const systemInstruction = `You are an assistant that reads student group chat messages and extracts only important information. Classify each relevant message into exactly one category: 'date' (exams, events, meetings, holidays, important days), 'assignment' (homework, submissions, projects, labs, anything students must do), 'notice' (announcements, rule changes, fees, circulars, timetable changes). Ignore casual talk, greetings, memes and replies like 'ok' or 'thanks'. Resolve relative dates such as 'tomorrow' or 'next Monday' using today's date, which is ${todayStr}, and the message timestamp. Return ONLY valid JSON, no markdown, in this shape: { items: [{ type, title, details, deadline (ISO 8601 or null), sender, sourceMessage, priority }], casualCount: number, casualHighlights: string[] (max 3 short lines) }. If a message updates an earlier one (for example a changed deadline), return the latest version only.`;
+    const systemInstruction = `You are an assistant that reads student group chat messages and extracts only important academic and schedule information. Classify each relevant message into exactly one category:
+- 'date': exams, major submission deadlines, holidays, or milestones without a scheduled call/meeting.
+- 'meeting': classes, lectures, viva sessions, study group meetups, Zoom/Teams/Meet video calls, project syncs, office hours, and events with a specific time (e.g., "meet at 4pm in the library", "Zoom call tomorrow 7pm", "viva postponed to 3pm").
+- 'assignment': homework, submissions, projects, labs, problem sets, anything students must complete.
+- 'notice': campus announcements, rule changes, fee circulars, timetable changes.
+
+For 'meeting' items:
+- 'startTime': ISO 8601 timestamp string (e.g., "2026-10-15T16:00:00.000Z") calculated using today's date (${todayStr}) and message timestamp.
+- 'endTime': ISO 8601 timestamp string or null if not stated.
+- 'location': Physical room/building or virtual platform (e.g., "Library Room 302", "Hall 4", "Zoom"), or null.
+- 'meetingLink': URL for online calls (e.g. https://zoom.us/j/..., https://meet.google.com/...) or null.
+- 'attendees': Array of attendee names or groups mentioned (e.g., ["TA David", "Group 3"]), or [].
+- 'isAllDay': Set to true IF only a date was given with no specific hour/time.
+- 'isRescheduled': Set to true IF a message updates/changes an earlier meeting time (e.g., "meeting shifted to 5pm", "call rescheduled to Friday", "moved from 4pm to 5pm"). Include the updated startTime.
+
+Ignore casual chatter, greetings, memes, and short replies like 'ok' or 'thanks'. Resolve relative dates such as 'tomorrow' or 'next Monday' using today's date (${todayStr}).
+
+Return ONLY valid JSON, no markdown codeblocks, matching this JSON schema:
+{
+  "items": [
+    {
+      "type": "date" | "meeting" | "assignment" | "notice",
+      "title": string,
+      "details": string,
+      "deadline": string | null,
+      "startTime": string | null,
+      "endTime": string | null,
+      "location": string | null,
+      "meetingLink": string | null,
+      "attendees": string[],
+      "isAllDay": boolean,
+      "isRescheduled": boolean,
+      "sender": string,
+      "sourceMessage": string,
+      "priority": "low" | "medium" | "high"
+    }
+  ],
+  "casualCount": number,
+  "casualHighlights": string[] (max 3 short lines)
+}`;
 
     // Format chat messages for model
     const formattedMessages = messages
@@ -106,15 +145,41 @@ app.post('/api/summarise-batch', async (req: Request, res: Response) => {
         if (parsed && typeof parsed === 'object') {
           // Normalize items
           const items = Array.isArray(parsed.items)
-            ? parsed.items.map((it: any) => ({
-                type: ['date', 'assignment', 'notice'].includes(it.type) ? it.type : 'notice',
-                title: String(it.title || 'Untitled Notice').slice(0, 100),
-                details: String(it.details || it.title || ''),
-                deadline: it.deadline && typeof it.deadline === 'string' ? it.deadline : null,
-                sender: String(it.sender || 'Classmate'),
-                sourceMessage: String(it.sourceMessage || it.details || it.title || ''),
-                priority: ['low', 'medium', 'high'].includes(it.priority) ? it.priority : 'medium',
-              }))
+            ? parsed.items.map((it: any) => {
+                const itemType = ['date', 'assignment', 'notice', 'meeting'].includes(it.type)
+                  ? it.type
+                  : 'notice';
+                const startTime =
+                  it.startTime && typeof it.startTime === 'string' ? it.startTime : null;
+                const deadline =
+                  it.deadline && typeof it.deadline === 'string'
+                    ? it.deadline
+                    : itemType === 'meeting' && startTime
+                    ? startTime
+                    : null;
+
+                return {
+                  type: itemType,
+                  title: String(it.title || 'Untitled Notice').slice(0, 100),
+                  details: String(it.details || it.title || ''),
+                  deadline,
+                  startTime,
+                  endTime: it.endTime && typeof it.endTime === 'string' ? it.endTime : null,
+                  location: it.location && typeof it.location === 'string' ? it.location : null,
+                  meetingLink:
+                    it.meetingLink && typeof it.meetingLink === 'string' ? it.meetingLink : null,
+                  attendees: Array.isArray(it.attendees)
+                    ? it.attendees.map((a: any) => String(a).trim()).filter(Boolean)
+                    : [],
+                  isAllDay: Boolean(it.isAllDay),
+                  isRescheduled: Boolean(it.isRescheduled),
+                  sender: String(it.sender || 'Classmate'),
+                  sourceMessage: String(it.sourceMessage || it.details || it.title || ''),
+                  priority: ['low', 'medium', 'high'].includes(it.priority)
+                    ? it.priority
+                    : 'medium',
+                };
+              })
             : [];
 
           parsedResult = {

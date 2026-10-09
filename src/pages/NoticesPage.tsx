@@ -14,6 +14,7 @@ import {
 import { useSyncPulse } from '../context/SyncPulseContext';
 import { ExtractedItem, ItemPriority } from '../types';
 import { EmptyState } from '../components/EmptyState';
+import { ItemRowSkeleton } from '../components/SkeletonLoader';
 
 export const NoticesPage: React.FC = () => {
   const {
@@ -23,6 +24,7 @@ export const NoticesPage: React.FC = () => {
     deleteItem,
     toggleDone,
     showToast,
+    isScanning,
   } = useSyncPulse();
 
   const [filterPriority, setFilterPriority] = useState<string>('all');
@@ -145,7 +147,13 @@ export const NoticesPage: React.FC = () => {
       </div>
 
       {/* Notices List or Empty State */}
-      {items.filter((i) => i.type === 'notice').length === 0 ? (
+      {isScanning ? (
+        <div className="space-y-3.5">
+          <ItemRowSkeleton />
+          <ItemRowSkeleton />
+          <ItemRowSkeleton />
+        </div>
+      ) : items.filter((i) => i.type === 'notice').length === 0 ? (
         <EmptyState
           icon={Bell}
           text="No campus or classroom announcements right now."

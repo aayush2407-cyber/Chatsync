@@ -217,6 +217,23 @@ export function generateDemoData(): {
     { sender: 'Alex Rivera (You)', text: 'Dr. Kapoor just sent the slide template' },
     { sender: 'Maya Lin', text: 'I will design slides 1 to 4 with the UI screenshots' },
     { sender: 'Lucas Miller', text: 'I will take slides 5 and 6 with database schema and deduplication rules' },
+    {
+      sender: 'Elena Rostova',
+      text: 'Hey team, meeting shifted to 5pm today on Google Meet: https://meet.google.com/ais-demo-sync. We will rehearse the slide deck!',
+      isMeeting: true,
+      title: 'Project Presentation Dry Run',
+      details: 'Rehearse slide transitions, time the speaker parts, and test demo links.',
+      deadline: thisThursday.iso,
+      startTime: thisThursday.iso,
+      endTime: new Date(new Date(thisThursday.iso).getTime() + 45 * 60000).toISOString(),
+      location: 'Google Meet',
+      meetingLink: 'https://meet.google.com/ais-demo-sync',
+      attendees: ['Alex Rivera (You)', 'Maya Lin', 'Lucas Miller', 'Elena Rostova'],
+      isAllDay: false,
+      isRescheduled: true,
+      rescheduledReason: 'Shifted to 5:00 PM per Elena',
+      priority: 'high' as const,
+    },
     { sender: 'Elena Rostova', text: 'I will do slides 7 and 8 with roadmap and testing coverage' },
     { sender: 'Alex Rivera (You)', text: 'Teamwork on point 🔥' },
     { sender: 'Maya Lin', text: 'SyncPulse is going to look super polished' },
@@ -336,6 +353,29 @@ export function generateDemoData(): {
         done: false,
         createdAt: msgTime,
         priority: raw.priority!,
+      });
+    } else if ('isMeeting' in raw && raw.isMeeting) {
+      const rawMeet = raw as any;
+      items.push({
+        id: `item-prj-meet-${idx}`,
+        chatId: chat2Id,
+        type: 'meeting',
+        title: rawMeet.title || 'Project Meeting',
+        details: rawMeet.details || '',
+        sender: rawMeet.sender,
+        sourceMessage: rawMeet.text,
+        deadline: rawMeet.deadline || rawMeet.startTime,
+        startTime: rawMeet.startTime || rawMeet.deadline,
+        endTime: rawMeet.endTime || null,
+        location: rawMeet.location || null,
+        meetingLink: rawMeet.meetingLink || null,
+        attendees: Array.isArray(rawMeet.attendees) ? rawMeet.attendees : [],
+        isAllDay: Boolean(rawMeet.isAllDay),
+        isRescheduled: Boolean(rawMeet.isRescheduled),
+        rescheduledReason: rawMeet.rescheduledReason || null,
+        done: false,
+        createdAt: msgTime,
+        priority: rawMeet.priority || 'medium',
       });
     }
   });

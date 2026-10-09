@@ -16,10 +16,12 @@ import {
   ExternalLink,
   ChevronRight,
   Filter,
+  Video,
 } from 'lucide-react';
 import { useSyncPulse } from '../context/SyncPulseContext';
 import { ChatSource, ExtractedItemType, ItemPriority, Message, ExtractedItem, Chat } from '../types';
 import { EmptyState } from '../components/EmptyState';
+import { ChatCardSkeleton } from '../components/SkeletonLoader';
 
 export const ChatsPage: React.FC = () => {
   const {
@@ -132,6 +134,12 @@ export const ChatsPage: React.FC = () => {
       sender: msg.sender,
       sourceMessage: msg.text,
       deadline: new Date(Date.now() + 86400000 * 4).toISOString(),
+      startTime: type === 'meeting' ? new Date(Date.now() + 86400000 * 4).toISOString() : null,
+      endTime:
+        type === 'meeting'
+          ? new Date(Date.now() + 86400000 * 4 + 3600000).toISOString()
+          : null,
+      isAllDay: false,
       done: false,
       createdAt: nowIso,
       priority: 'medium',
@@ -509,7 +517,12 @@ export const ChatsPage: React.FC = () => {
       </div>
 
       {/* Grid of Chats */}
-      {filteredChats.length === 0 ? (
+      {isSummarising ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ChatCardSkeleton />
+          <ChatCardSkeleton />
+        </div>
+      ) : filteredChats.length === 0 ? (
         <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 my-6">
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
             No chats found matching your search.

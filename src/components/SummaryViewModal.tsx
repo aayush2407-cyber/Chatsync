@@ -15,10 +15,14 @@ import {
   AlertCircle,
   RefreshCw,
   ArrowRight,
+  Video,
+  MapPin,
+  RotateCw,
 } from 'lucide-react';
 import { ExtractedItem, Summary } from '../types';
 import { useSyncPulse } from '../context/SyncPulseContext';
 import { DeadlineBadge } from './DeadlineBadge';
+import { CalendarButton } from './CalendarButton';
 
 interface SummaryViewModalProps {
   isOpen: boolean;
@@ -39,6 +43,7 @@ export const SummaryViewModal: React.FC<SummaryViewModalProps> = ({
 
   // Collapsible section open states (all open by default)
   const [casualOpen, setCasualOpen] = useState(true);
+  const [meetingsOpen, setMeetingsOpen] = useState(true);
   const [datesOpen, setDatesOpen] = useState(true);
   const [assignmentsOpen, setAssignmentsOpen] = useState(true);
   const [noticesOpen, setNoticesOpen] = useState(true);
@@ -48,6 +53,7 @@ export const SummaryViewModal: React.FC<SummaryViewModalProps> = ({
 
   if (!isOpen || !summary) return null;
 
+  const meetingItems = items.filter((i) => i.type === 'meeting');
   const dateItems = items.filter((i) => i.type === 'date');
   const assignmentItems = items.filter((i) => i.type === 'assignment');
   const noticeItems = items.filter((i) => i.type === 'notice');
@@ -105,12 +111,18 @@ export const SummaryViewModal: React.FC<SummaryViewModalProps> = ({
           </div>
 
           {/* Quick Metrics Bar */}
-          <div className="bg-slate-50 dark:bg-slate-800/50 px-5 sm:px-6 py-3 border-b border-slate-100 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs shrink-0">
+          <div className="bg-slate-50 dark:bg-slate-800/50 px-5 sm:px-6 py-3 border-b border-slate-100 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs shrink-0">
             <div className="text-slate-600 dark:text-slate-400">
               <strong className="text-slate-900 dark:text-white text-sm block">
                 {summary.casualCount}
               </strong>
-              <span>Casual messages skipped</span>
+              <span>Casual filtered</span>
+            </div>
+            <div className="text-slate-600 dark:text-slate-400">
+              <strong className="text-emerald-600 dark:text-emerald-400 text-sm block">
+                {meetingItems.length}
+              </strong>
+              <span>Meetings</span>
             </div>
             <div className="text-slate-600 dark:text-slate-400">
               <strong className="text-indigo-600 dark:text-indigo-400 text-sm block">
@@ -119,7 +131,7 @@ export const SummaryViewModal: React.FC<SummaryViewModalProps> = ({
               <span>Important Dates</span>
             </div>
             <div className="text-slate-600 dark:text-slate-400">
-              <strong className="text-emerald-600 dark:text-emerald-400 text-sm block">
+              <strong className="text-indigo-600 dark:text-indigo-400 text-sm block">
                 {assignmentItems.length}
               </strong>
               <span>Assignments</span>
@@ -274,7 +286,126 @@ export const SummaryViewModal: React.FC<SummaryViewModalProps> = ({
               )}
             </div>
 
-            {/* GROUP 3: Important Assignments */}
+            {/* GROUP: Scheduled Meetings & Viva Calls */}
+            <div className="border border-slate-200/80 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
+              <button
+                type="button"
+                onClick={() => setMeetingsOpen(!meetingsOpen)}
+                className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer min-h-[50px]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
+                    <Video className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-slate-900 dark:text-white">
+                        Meetings & Class Calls
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                        {meetingItems.length}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Lectures, viva oral sessions, Zoom/Meet video calls, and group study syncs
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-slate-400 p-1">
+                  {meetingsOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </div>
+              </button>
+
+              {meetingsOpen && (
+                <div className="p-4 pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
+                  {meetingItems.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic text-center py-2">
+                      No meetings or calls found in this chat.
+                    </p>
+                  ) : (
+                    meetingItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-4 rounded-2xl bg-emerald-50/30 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/60 space-y-2 hover:border-emerald-400 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                                Meeting
+                              </span>
+                              {item.isRescheduled && (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1">
+                                  <RotateCw className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                                  <span>Rescheduled</span>
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="font-bold text-sm text-slate-900 dark:text-white leading-snug">
+                              {item.title}
+                            </h4>
+                          </div>
+
+                          {item.meetingLink && (
+                            <a
+                              href={item.meetingLink.startsWith('http') ? item.meetingLink : `https://${item.meetingLink}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center gap-1 shadow-xs transition-colors shrink-0"
+                            >
+                              <Video className="w-3.5 h-3.5" />
+                              <span>Join</span>
+                              <ExternalLink className="w-2.5 h-2.5 opacity-80" />
+                            </a>
+                          )}
+                        </div>
+
+                        {/* Location & Time */}
+                        <div className="flex items-center gap-3 flex-wrap text-xs text-slate-600 dark:text-slate-300">
+                          {item.startTime && (
+                            <div className="flex items-center gap-1 font-medium text-slate-700 dark:text-slate-200">
+                              <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <span>
+                                {new Date(item.startTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                                {item.endTime ? ` – ${new Date(item.endTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}
+                              </span>
+                            </div>
+                          )}
+                          {item.location && (
+                            <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
+                              <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                              <span>{item.location}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {item.details && (
+                          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                            {item.details}
+                          </p>
+                        )}
+
+                        <div className="pt-2 border-t border-slate-200/40 dark:border-slate-700/40 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+                          <span>From: <strong>{item.sender}</strong></span>
+                          <div className="flex items-center gap-2">
+                            <CalendarButton item={item} size="sm" />
+                            <button
+                              type="button"
+                              onClick={() => setPreviewItem(item)}
+                              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer min-h-[32px]"
+                            >
+                              <span>Original message</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
             <div className="border border-slate-200/80 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
               <button
                 type="button"
@@ -370,14 +501,17 @@ export const SummaryViewModal: React.FC<SummaryViewModalProps> = ({
                             <span>From: <strong>{item.sender}</strong></span>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => setPreviewItem(item)}
-                            className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer min-h-[32px]"
-                          >
-                            <span>View original message</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <CalendarButton item={item} size="sm" />
+                            <button
+                              type="button"
+                              onClick={() => setPreviewItem(item)}
+                              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer min-h-[32px]"
+                            >
+                              <span>Original message</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))
@@ -457,14 +591,17 @@ export const SummaryViewModal: React.FC<SummaryViewModalProps> = ({
                             <span>From: <strong>{item.sender}</strong></span>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => setPreviewItem(item)}
-                            className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer min-h-[32px]"
-                          >
-                            <span>View original message</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <CalendarButton item={item} size="sm" />
+                            <button
+                              type="button"
+                              onClick={() => setPreviewItem(item)}
+                              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer min-h-[32px]"
+                            >
+                              <span>Original message</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))

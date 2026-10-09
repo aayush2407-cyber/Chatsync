@@ -21,6 +21,11 @@ import {
 import { generateDemoData } from '../data/demoDataGenerator';
 import { ParsedChatResult } from '../utils/chatParsers';
 import { getReminderTriggerTime } from '../utils/deadlines';
+import {
+  generateSingleItemICS,
+  generateAllUpcomingICS,
+  downloadICS,
+} from '../utils/calendarExport';
 
 export interface ImportSummaryResult {
   chatId: string;
@@ -94,6 +99,13 @@ interface SyncPulseContextType {
   runAIScan: () => void;
   resetToSampleData: () => void;
   clearAllData: () => void;
+  deleteAllData: () => void;
+  disconnectAllSources: () => void;
+
+  // First-time Onboarding
+  isOnboardingOpen: boolean;
+  setIsOnboardingOpen: (val: boolean) => void;
+  completeOnboarding: () => void;
 
   // Demo Mode
   loadDemoMode: () => void;
@@ -111,6 +123,12 @@ interface SyncPulseContextType {
   setIsNotificationModalOpen: (val: boolean) => void;
   requestNotificationPermission: () => Promise<boolean>;
   checkDueReminders: () => void;
+
+  // Calendar Integration
+  toggleItemAlarm: (itemId: string) => void;
+  toggleItemCalendarSync: (itemId: string) => void;
+  exportItemCalendar: (item: ExtractedItem) => void;
+  exportAllUpcomingCalendar: () => void;
 }
 
 const STORAGE_KEY = 'syncpulse_app_state_v2';
@@ -235,6 +253,22 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     chatId?: string;
   } | null>(null);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+
+  // First-time Onboarding State
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const completed = localStorage.getItem('syncpulse_onboarding_completed_v1');
+      return completed !== 'true';
+    }
+    return false;
+  });
+
+  const completeOnboarding = () => {
+    setIsOnboardingOpen(false);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('syncpulse_onboarding_completed_v1', 'true');
+    }
+  };
 
   // Apply dark mode
   useEffect(() => {
@@ -552,6 +586,18 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               sender: it.sender,
               sourceMessage: it.sourceMessage,
               deadline: it.deadline,
+              startTime: it.startTime || null,
+              endTime: it.endTime || null,
+              location: it.location || null,
+              meetingLink: it.meetingLink || null,
+              attendees: Array.isArray(it.attendees) ? it.attendees : [],
+              isAllDay: Boolean(it.isAllDay),
+              isRescheduled: Boolean(it.isRescheduled),
+              ringAlarm: settings.defaultAlarmsEnabled,
+              isCalendarSynced: settings.autoCalendarSync,
+              calendarEventId: settings.autoCalendarSync
+                ? `cal-evt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+                : null,
               done: false,
               createdAt: new Date().toISOString(),
               priority: it.priority || 'medium',
@@ -692,6 +738,18 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 sender: it.sender,
                 sourceMessage: it.sourceMessage,
                 deadline: it.deadline,
+                startTime: it.startTime || null,
+                endTime: it.endTime || null,
+                location: it.location || null,
+                meetingLink: it.meetingLink || null,
+                attendees: Array.isArray(it.attendees) ? it.attendees : [],
+                isAllDay: Boolean(it.isAllDay),
+                isRescheduled: Boolean(it.isRescheduled),
+                ringAlarm: settings.defaultAlarmsEnabled,
+                isCalendarSynced: settings.autoCalendarSync,
+                calendarEventId: settings.autoCalendarSync
+                  ? `cal-evt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+                  : null,
                 done: false,
                 createdAt: new Date().toISOString(),
                 priority: it.priority || 'medium',
@@ -765,17 +823,74 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     summariseChatAI(targetChatId);
   };
 
-  // STORE ACTION: addItems with deduplication rule
-  // Rule: before adding an item, skip it if an existing item in the same chat has the same type
-  // and a very similar title (case-insensitive) and the same deadline.
+  // STORE ACTION: addItems with deduplication and meeting reschedule rules
+  // Rule 1: For meetings, if an existing meeting with a similar title exists in the same chat,
+  // treat time changes ("meeting shifted to 5pm") as an update to the earlier meeting and mark isRescheduled: true.
+  // Rule 2: Skip duplicates with exact same type, similar title, and matching date/deadline.
   const addItems = (newItems: ExtractedItem[]) => {
     let addedCount = 0;
     let skippedCount = 0;
+    let rescheduledCount = 0;
 
     setItems((prevItems) => {
       const updatedList = [...prevItems];
 
       for (const candidate of newItems) {
+        // 1. Meeting reschedule check
+        if (candidate.type === 'meeting') {
+          const existingIndex = updatedList.findIndex((existing) => {
+            const sameChat = existing.chatId === candidate.chatId;
+            const isMeeting = existing.type === 'meeting';
+            const similarTitle = areTitlesVerySimilar(existing.title, candidate.title);
+            return sameChat && isMeeting && similarTitle;
+          });
+
+          if (existingIndex >= 0) {
+            const existing = updatedList[existingIndex];
+            const candidateTime = candidate.startTime || candidate.deadline;
+            const existingTime = existing.startTime || existing.deadline;
+            const isTimeChanged =
+              !areDeadlinesEqual(existingTime, candidateTime) || Boolean(candidate.isRescheduled);
+
+            if (isTimeChanged) {
+              // Update existing meeting in-place as a rescheduled item
+              const updatedMeeting: ExtractedItem = {
+                ...existing,
+                title: candidate.title || existing.title,
+                startTime: candidate.startTime || candidate.deadline || existing.startTime,
+                endTime: candidate.endTime ?? existing.endTime,
+                deadline: candidate.deadline || candidate.startTime || existing.deadline,
+                location: candidate.location ?? existing.location,
+                meetingLink: candidate.meetingLink ?? existing.meetingLink,
+                attendees:
+                  candidate.attendees && candidate.attendees.length > 0
+                    ? candidate.attendees
+                    : existing.attendees,
+                details: candidate.details || existing.details,
+                sourceMessage: candidate.sourceMessage || existing.sourceMessage,
+                isRescheduled: true,
+                rescheduledReason: candidate.details || 'Meeting time updated from chat',
+                // Keep and update calendar sync status
+                isCalendarSynced: existing.isCalendarSynced ?? settings.autoCalendarSync,
+                calendarEventId:
+                  existing.calendarEventId ||
+                  (settings.autoCalendarSync
+                    ? `cal-evt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+                    : null),
+                ringAlarm: candidate.ringAlarm ?? existing.ringAlarm ?? settings.defaultAlarmsEnabled,
+              };
+              updatedList[existingIndex] = updatedMeeting;
+              rescheduledCount++;
+              continue;
+            } else {
+              // Exact duplicate meeting with unchanged time
+              skippedCount++;
+              continue;
+            }
+          }
+        }
+
+        // 2. Standard deduplication check for other items
         const isDuplicate = updatedList.some((existing) => {
           const sameChat = existing.chatId === candidate.chatId;
           const sameType = existing.type === candidate.type;
@@ -788,7 +903,20 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (isDuplicate) {
           skippedCount++;
         } else {
-          updatedList.unshift(candidate);
+          // If autoCalendarSync is enabled, set calendarEventId on new items with dates
+          const preparedCandidate: ExtractedItem = {
+            ...candidate,
+            ringAlarm: candidate.ringAlarm ?? settings.defaultAlarmsEnabled,
+            isCalendarSynced:
+              candidate.isCalendarSynced ??
+              (settings.autoCalendarSync && Boolean(candidate.deadline || candidate.startTime)),
+            calendarEventId:
+              candidate.calendarEventId ||
+              (settings.autoCalendarSync && (candidate.deadline || candidate.startTime)
+                ? `cal-evt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+                : null),
+          };
+          updatedList.unshift(preparedCandidate);
           addedCount++;
         }
       }
@@ -796,13 +924,19 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return updatedList;
     });
 
+    if (rescheduledCount > 0) {
+      showToast(
+        `Updated & rescheduled ${rescheduledCount} meeting${rescheduledCount === 1 ? '' : 's'}`
+      );
+    }
+
     if (addedCount > 0) {
       showToast(
         `Added ${addedCount} item${addedCount === 1 ? '' : 's'}${
           skippedCount > 0 ? ` (${skippedCount} duplicate${skippedCount === 1 ? '' : 's'} skipped)` : ''
         }`
       );
-    } else if (skippedCount > 0) {
+    } else if (skippedCount > 0 && rescheduledCount === 0) {
       showToast(`${skippedCount} duplicate item${skippedCount === 1 ? '' : 's'} already existed — skipped`);
     }
 
@@ -812,7 +946,20 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // STORE ACTION: toggleDone
   const toggleDone = (itemId: string) => {
     setItems((prev) =>
-      prev.map((item) => (item.id === itemId ? { ...item, done: !item.done } : item))
+      prev.map((item) => {
+        if (item.id === itemId) {
+          const nextDone = !item.done;
+          if (item.isCalendarSynced) {
+            showToast(
+              nextDone
+                ? `Completed "${item.title}" & updated calendar event`
+                : `Reopened "${item.title}"`
+            );
+          }
+          return { ...item, done: nextDone };
+        }
+        return item;
+      })
     );
   };
 
@@ -824,8 +971,107 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // STORE ACTION: deleteItem
   const deleteItem = (itemId: string) => {
+    const target = items.find((i) => i.id === itemId);
     setItems((prev) => prev.filter((item) => item.id !== itemId));
-    showToast('Item deleted');
+    if (target?.isCalendarSynced) {
+      showToast(`Deleted "${target.title}" & removed calendar sync`);
+    } else {
+      showToast('Item deleted');
+    }
+  };
+
+  // CALENDAR INTEGRATION ACTIONS
+  const toggleItemAlarm = (itemId: string) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id === itemId) {
+          const currentAlarm = item.ringAlarm ?? settings.defaultAlarmsEnabled;
+          const nextAlarm = !currentAlarm;
+          showToast(
+            nextAlarm
+              ? 'Alarm enabled: Phone will ring at reminder times'
+              : 'Alarm turned off for this item'
+          );
+          return { ...item, ringAlarm: nextAlarm };
+        }
+        return item;
+      })
+    );
+  };
+
+  const toggleItemCalendarSync = (itemId: string) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id === itemId) {
+          const nextSync = !item.isCalendarSynced;
+          const evtId = nextSync
+            ? item.calendarEventId || `cal-evt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+            : null;
+          showToast(
+            nextSync
+              ? 'Item marked as synced with calendar'
+              : 'Removed from calendar sync'
+          );
+          return { ...item, isCalendarSynced: nextSync, calendarEventId: evtId };
+        }
+        return item;
+      })
+    );
+  };
+
+  const exportItemCalendar = (item: ExtractedItem) => {
+    const chat = chats.find((c) => c.id === item.chatId);
+    const chatName = chat?.name || 'Class Group';
+    const isAlarm = item.ringAlarm ?? settings.defaultAlarmsEnabled;
+    const icsContent = generateSingleItemICS(item, chatName, { ringAlarm: isAlarm });
+    const cleanTitle = item.title.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
+    downloadICS(`${cleanTitle}.ics`, icsContent);
+
+    // Ensure item has sync flag and event ID
+    if (!item.isCalendarSynced) {
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === item.id
+            ? {
+                ...i,
+                isCalendarSynced: true,
+                calendarEventId:
+                  i.calendarEventId || `cal-evt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              }
+            : i
+        )
+      );
+    }
+    showToast(`Downloaded calendar file for "${item.title}"`);
+  };
+
+  const exportAllUpcomingCalendar = () => {
+    const upcoming = items.filter((i) => !i.done && (i.deadline || i.startTime));
+    if (upcoming.length === 0) {
+      showToast('No upcoming unfinished deadlines or meetings to export.');
+      return;
+    }
+
+    const icsContent = generateAllUpcomingICS(items, chats, {
+      ringAlarm: settings.defaultAlarmsEnabled,
+    });
+    downloadICS('SyncPulse_All_Upcoming.ics', icsContent);
+
+    // Mark all upcoming items as synced
+    setItems((prev) =>
+      prev.map((i) =>
+        !i.done && (i.deadline || i.startTime)
+          ? {
+              ...i,
+              isCalendarSynced: true,
+              calendarEventId:
+                i.calendarEventId || `cal-evt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            }
+          : i
+      )
+    );
+
+    showToast(`Exported ${upcoming.length} upcoming items to SyncPulse_All_Upcoming.ics!`);
   };
 
   // STORE ACTION: saveSummary
@@ -915,6 +1161,38 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setItems([]);
     setSummaries([]);
     showToast('All data cleared. Showing fresh empty states.');
+  };
+
+  const deleteAllData = () => {
+    setChats([]);
+    setMessages([]);
+    setItems([]);
+    setSummaries([]);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(`${STORAGE_KEY}_chats`);
+        localStorage.removeItem(`${STORAGE_KEY}_messages`);
+        localStorage.removeItem(`${STORAGE_KEY}_items`);
+        localStorage.removeItem(`${STORAGE_KEY}_summaries`);
+      } catch {
+        // storage ignored
+      }
+    }
+    showToast('All personal data has been completely erased.');
+  };
+
+  const disconnectAllSources = () => {
+    setChats([]);
+    setMessages([]);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(`${STORAGE_KEY}_chats`);
+        localStorage.removeItem(`${STORAGE_KEY}_messages`);
+      } catch {
+        // storage ignored
+      }
+    }
+    showToast('All chat sources disconnected and raw messages cleared.');
   };
 
   const hasDemoData = chats.some((c) => c.source === 'demo' || c.id.startsWith('chat-demo'));
@@ -1116,6 +1394,11 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         runAIScan,
         resetToSampleData,
         clearAllData,
+        deleteAllData,
+        disconnectAllSources,
+        isOnboardingOpen,
+        setIsOnboardingOpen,
+        completeOnboarding,
         loadDemoMode,
         clearDemoData,
         hasDemoData,
@@ -1127,6 +1410,10 @@ export const SyncPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setIsNotificationModalOpen,
         requestNotificationPermission,
         checkDueReminders,
+        toggleItemAlarm,
+        toggleItemCalendarSync,
+        exportItemCalendar,
+        exportAllUpcomingCalendar,
       }}
     >
       {children}

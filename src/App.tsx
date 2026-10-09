@@ -5,6 +5,8 @@ import { ToastContainer } from './components/ToastContainer';
 import { SummaryViewModal } from './components/SummaryViewModal';
 import { SummariseProgressModal } from './components/SummariseProgressModal';
 import { NotificationPermissionModal } from './components/NotificationPermissionModal';
+import { OnboardingModal } from './components/OnboardingModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { DashboardPage } from './pages/DashboardPage';
 import { ConnectChatsPage } from './pages/ConnectChatsPage';
 import { ChatsPage } from './pages/ChatsPage';
@@ -12,10 +14,12 @@ import { ImportantDatesPage } from './pages/ImportantDatesPage';
 import { AssignmentsPage } from './pages/AssignmentsPage';
 import { NoticesPage } from './pages/NoticesPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { PrivacyPage } from './pages/PrivacyPage';
 
 const AppContent: React.FC = () => {
   const {
     activeTab,
+    setActiveTab,
     activeSummaryView,
     setActiveSummaryView,
     isSummarising,
@@ -42,6 +46,7 @@ const AppContent: React.FC = () => {
         {activeTab === 'assignments' && <AssignmentsPage />}
         {activeTab === 'notices' && <NoticesPage />}
         {activeTab === 'settings' && <SettingsPage />}
+        {activeTab === 'privacy' && <PrivacyPage />}
       </main>
 
       {/* Quiet Footer */}
@@ -50,11 +55,21 @@ const AppContent: React.FC = () => {
           <p className="font-medium text-slate-600 dark:text-slate-300">
             SyncPulse — AI Chat Hub: turn class chats into a clear to-do list.
           </p>
-          <p className="text-slate-400">
-            For students in WhatsApp, Discord, Slack, and Telegram groups.
-          </p>
+          <div className="flex items-center gap-4 text-slate-400">
+            <span>For students in WhatsApp, Discord, Slack, & Telegram groups.</span>
+            <span>•</span>
+            <button
+              onClick={() => setActiveTab('privacy')}
+              className="text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer font-medium"
+            >
+              Privacy & AI Policy
+            </button>
+          </div>
         </div>
       </footer>
+
+      {/* First-Time 3-Screen Onboarding Modal */}
+      <OnboardingModal />
 
       {/* AI Summary View Modal */}
       <SummaryViewModal
@@ -89,8 +104,10 @@ const AppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <SyncPulseProvider>
-      <AppContent />
-    </SyncPulseProvider>
+    <ErrorBoundary>
+      <SyncPulseProvider>
+        <AppContent />
+      </SyncPulseProvider>
+    </ErrorBoundary>
   );
 }

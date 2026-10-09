@@ -11,6 +11,14 @@ import {
   Check,
   Sparkles,
   CopyCheck,
+  Unplug,
+  ShieldCheck,
+  HelpCircle,
+  AlertTriangle,
+  ArrowRight,
+  Calendar,
+  Smartphone,
+  ExternalLink,
 } from 'lucide-react';
 import { useSyncPulse } from '../context/SyncPulseContext';
 import { ExtractedItem, ReminderOffset } from '../types';
@@ -25,6 +33,10 @@ export const SettingsPage: React.FC = () => {
     toggleDarkMode,
     resetToSampleData,
     clearAllData,
+    deleteAllData,
+    disconnectAllSources,
+    setIsOnboardingOpen,
+    setActiveTab,
     loadDemoMode,
     clearDemoData,
     hasDemoData,
@@ -36,6 +48,7 @@ export const SettingsPage: React.FC = () => {
     addItems,
     requestNotificationPermission,
     setIsNotificationModalOpen,
+    exportAllUpcomingCalendar,
   } = useSyncPulse();
 
   // Profile local form state
@@ -43,6 +56,10 @@ export const SettingsPage: React.FC = () => {
   const [university, setUniversity] = useState(student.university);
   const [major, setMajor] = useState(student.major);
   const [semester, setSemester] = useState(student.semester);
+
+  // Danger modal confirmations
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -372,68 +389,374 @@ export const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Data Management & Deduplication Tester */}
+      {/* 4. Calendar Integration, Google Calendar Auto-Sync & Alarms */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Calendar Integration & Auto-Sync
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Sync assignments, deadlines, and meetings directly with your phone and Google Calendar
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={exportAllUpcomingCalendar}
+            className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer min-h-[40px] shrink-0 self-start sm:self-center"
+            title="Download all upcoming deadlines and meetings in one .ics file"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export All Upcoming (.ics)</span>
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Google Calendar Auto-Sync (Coming soon) */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Google Calendar Auto-Sync
+                  </h4>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                    Coming soon
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
+                  Automatically sync newly detected deadlines and meetings to your Google Calendar without manual downloads.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  showToast(
+                    'Google Calendar cloud auto-sync is coming soon! In the meantime, use the "Add to Calendar" button to download .ics files or open prefilled Google Calendar templates.'
+                  )
+                }
+                className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 cursor-pointer min-h-[40px] shrink-0"
+              >
+                <Calendar className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Connect Google Calendar</span>
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold ml-1">(Coming soon)</span>
+              </button>
+            </div>
+
+            {/* Option in Settings: Automatically add new deadlines and meetings to my calendar */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-200/60 dark:border-slate-700/60">
+              <div>
+                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
+                  Automatically add new deadlines and meetings to my calendar
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  When enabled, any item extracted by AI is automatically prepared with calendar sync event tags.
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.autoCalendarSync}
+                onChange={(e) => {
+                  updateSettings({ autoCalendarSync: e.target.checked });
+                  showToast(
+                    e.target.checked
+                      ? 'Auto-calendar sync preference enabled for new items'
+                      : 'Auto-calendar sync turned off'
+                  );
+                }}
+                className="w-5 h-5 rounded text-indigo-600 cursor-pointer"
+              />
+            </div>
+          </div>
+
+          {/* Alarm option default */}
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40">
+            <div>
+              <div className="flex items-center gap-1.5">
+                <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  Built-in Calendar Alarms (VALARM)
+                </h4>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                Your phone's calendar will ring at the reminder times (1 day before, 1 hour before, and 10 minutes before).
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={settings.defaultAlarmsEnabled}
+              onChange={(e) => {
+                updateSettings({ defaultAlarmsEnabled: e.target.checked });
+                showToast(
+                  e.target.checked
+                    ? 'Calendar alarms enabled: exported events will ring your phone'
+                    : 'Calendar alarms disabled for exports'
+                );
+              }}
+              className="w-5 h-5 rounded text-indigo-600 cursor-pointer"
+            />
+          </div>
+
+          {/* Note for Android and iPhone users on how to make calendar notifications loud */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white">
+              <Smartphone className="w-4 h-4 text-indigo-500" />
+              <span>How to make calendar alarms ring loudly on your phone</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-600 dark:text-slate-400">
+              <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800">
+                <p className="font-bold text-slate-900 dark:text-white mb-1">
+                  📱 iPhone / iPad (iOS):
+                </p>
+                <p className="text-[11px] leading-relaxed">
+                  Go to <strong>Settings &gt; Notifications &gt; Calendar</strong>.
+                  Turn on <strong>Allow Notifications</strong>, set Alert style to <strong>Banners or Alerts</strong>, and tap <strong>Sounds</strong> to choose a loud chime. Ensure Silent mode is unmuted.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800">
+                <p className="font-bold text-slate-900 dark:text-white mb-1">
+                  🤖 Android:
+                </p>
+                <p className="text-[11px] leading-relaxed">
+                  Go to <strong>Settings &gt; Apps &gt; Calendar &gt; Notifications</strong>.
+                  Set notification importance to <strong>Alerting / High</strong>, tap <strong>Event reminders &gt; Sound</strong>, and select a prominent alarm sound. Turn off battery optimization for Calendar.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Onboarding Guide & Walkthrough Card */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <HelpCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                New User Onboarding
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Review the 3-step guide: Connect a chat, Tap Summarise, and Never miss a deadline
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsOnboardingOpen(true)}
+            className="px-4 py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-semibold text-xs flex items-center gap-2 cursor-pointer transition-colors min-h-[44px]"
+            aria-label="Replay the 3-step onboarding walkthrough"
+          >
+            <Sparkles className="w-4 h-4 text-indigo-500" />
+            <span>Replay Guide</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 5. Privacy & Data Protection Link Card */}
+      <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 dark:from-emerald-950/30 dark:via-teal-950/30 dark:to-indigo-950/30 rounded-3xl p-6 border border-emerald-200/80 dark:border-emerald-800/60 shadow-sm space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Privacy, Local Storage & AI Guardrails
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+                Only selected chats are processed. AI extracts tasks and dates only. Nothing is ever shared with other users.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('privacy')}
+            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-colors min-h-[44px] shrink-0"
+            aria-label="Open detailed privacy policy"
+          >
+            <span>Read Privacy Page</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* 6. Data Management, Disconnect & Wipe Controls */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
         <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center">
             <Shield className="w-5 h-5" />
           </div>
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white">
-              Data Management & Deduplication
+              Data Management & Danger Zone
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Manage chats, items, and verify automatic deduplication rules
+              Manage backups, disconnect sources, or wipe local application memory
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
           <button
+            type="button"
             onClick={loadDemoMode}
-            className="min-h-[48px] px-4 py-3 rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+            className="min-h-[46px] px-4 py-2.5 rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/30 hover:bg-indigo-100/60 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
           >
             <Sparkles className="w-4 h-4 text-indigo-500" />
-            <span>Load Demo Chats (CSE-4 & Project Team)</span>
+            <span>Load Demo Chats</span>
           </button>
 
           <button
+            type="button"
             onClick={clearDemoData}
             disabled={!hasDemoData}
-            className="min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-300 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Remove demo chats and their tasks/dates"
+            className="min-h-[46px] px-4 py-2.5 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30 hover:bg-amber-100/60 dark:hover:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RotateCcw className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             <span>Clear Demo Data</span>
           </button>
 
           <button
+            type="button"
             onClick={handleTestDeduplication}
-            className="min-h-[48px] px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
-            title="Attempts to add an item with the same type, similar title, and same deadline to verify it gets skipped"
+            className="min-h-[46px] px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
           >
             <CopyCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             <span>Test Deduplication Rule</span>
           </button>
 
           <button
+            type="button"
             onClick={handleExportJSON}
-            className="min-h-[48px] px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+            className="min-h-[46px] px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
           >
             <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <span>Backup Data Model (.json)</span>
           </button>
+        </div>
+
+        {/* Explicit Disconnect and Delete Buttons */}
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setShowDisconnectModal(true)}
+            className="min-h-[48px] px-4 py-3 rounded-2xl border border-amber-300 dark:border-amber-800/80 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500"
+            aria-label="Disconnect all chat sources"
+          >
+            <Unplug className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <span>Disconnect all sources</span>
+          </button>
 
           <button
-            onClick={clearAllData}
-            className="sm:col-span-2 min-h-[48px] px-5 py-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
-            title="Wipe data to test all empty states"
+            type="button"
+            onClick={() => setShowDeleteAllModal(true)}
+            className="min-h-[48px] px-4 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-xs focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
+            aria-label="Delete all my data"
           >
-            <Trash2 className="w-4 h-4 text-rose-600" />
-            <span>Clear All Data</span>
+            <Trash2 className="w-4 h-4 text-white" />
+            <span>Delete all my data</span>
           </button>
         </div>
       </div>
+
+      {/* Confirmation Modal: Disconnect all sources */}
+      {showDisconnectModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="disconnect-modal-title"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <Unplug className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 id="disconnect-modal-title" className="text-lg font-bold text-slate-900 dark:text-white">
+                Disconnect all chat sources?
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                This will remove all connected WhatsApp, Discord, Slack, and Telegram imports and clear all raw messages from your device. Extracted to-do items will be retained.
+              </p>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDisconnectModal(false)}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-h-[44px] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  disconnectAllSources();
+                  setShowDisconnectModal(false);
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-semibold transition-colors min-h-[44px] cursor-pointer"
+              >
+                Yes, Disconnect Sources
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal: Delete all my data */}
+      {showDeleteAllModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-all-modal-title"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 id="delete-all-modal-title" className="text-lg font-bold text-slate-900 dark:text-white">
+                Delete all your data permanently?
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                This will wipe all connected chats, raw messages, extracted assignments, exam dates, circulars, and summaries from this browser. This action cannot be reversed.
+              </p>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteAllModal(false)}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-h-[44px] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteAllData();
+                  setShowDeleteAllModal(false);
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs sm:text-sm font-semibold transition-colors min-h-[44px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
+              >
+                Yes, Delete Everything
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

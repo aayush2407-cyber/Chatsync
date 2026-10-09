@@ -18,7 +18,7 @@ export interface Message {
   hash: string;
 }
 
-export type ExtractedItemType = 'date' | 'assignment' | 'notice';
+export type ExtractedItemType = 'date' | 'assignment' | 'notice' | 'meeting';
 export type ItemPriority = 'low' | 'medium' | 'high';
 export type ReminderOffset = '1d' | '3h' | '1h' | 'none';
 
@@ -36,6 +36,21 @@ export interface ExtractedItem {
   priority: ItemPriority;
   reminderOffset?: ReminderOffset;
   reminderTriggered?: boolean;
+
+  // Meeting specific fields:
+  startTime?: string | null; // ISO string
+  endTime?: string | null; // ISO string or null
+  location?: string | null; // string or null
+  meetingLink?: string | null; // string or null
+  attendees?: string[];
+  isAllDay?: boolean;
+  isRescheduled?: boolean;
+  rescheduledReason?: string | null;
+
+  // Calendar integration fields:
+  ringAlarm?: boolean;
+  calendarEventId?: string | null;
+  isCalendarSynced?: boolean;
 }
 
 export interface Summary {
@@ -46,6 +61,7 @@ export interface Summary {
   dateCount: number;
   assignmentCount: number;
   noticeCount: number;
+  meetingCount?: number;
   casualHighlights: string[];
 }
 
@@ -67,6 +83,8 @@ export interface StudentSettings {
   autoExtractTasks: boolean;
   defaultReminderOffset: ReminderOffset;
   browserNotificationsEnabled: boolean;
+  autoCalendarSync: boolean;
+  defaultAlarmsEnabled: boolean;
 }
 
 export type NavTab = 
@@ -76,4 +94,5 @@ export type NavTab =
   | 'dates'
   | 'assignments'
   | 'notices'
-  | 'settings';
+  | 'settings'
+  | 'privacy';
